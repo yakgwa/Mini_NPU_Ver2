@@ -261,11 +261,12 @@ ZyNet에서 사용되는 single artificial neuron은 Fig.2.(a)에 제시되어 �
             ...
             endtask
 
-<table border="1" bordercolor="#4A90E2" bgcolor="#f0f7ff">
+<table border="1" bordercolor="#4A90E2" style="border-collapse: collapse; background-color: #f0f7ff;">
   <tr>
-    <td>
+    <td style="padding: 15px; font-size: 0.85em; color: #333;">
       <p align="center"><b>[pretrained = ON]</b></p>
       <p align="center">ROM(weight) —▶ MAC —▶ activation</p>
+      <br>
       <p align="center"><b>[pretrained = OFF]</b></p>
       <p align="center">AXI —▶ RAM(weight) —▶ MAC —▶ activation</p>
     </td>
