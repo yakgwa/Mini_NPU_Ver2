@@ -29,62 +29,48 @@
 		    output  reg [dataWidth-1:0]  out
 		);
 
-always @(posedge clk)
-begin
-    if($signed(x) >= 0) //x>=0이면 그대로 전달 (x를 2's complement signed값으로 해석)
-    begin
-        if(|x[2*dataWidth-1-:weightIntWidth+1]) //over flow to sign bit of integer part
-            out <= {1'b0,{(dataWidth-1){1'b1}}}; //positive saturate
-        else
-            out <= x[2*dataWidth-1-weightIntWidth-:dataWidth];
-    end
-    else                //x<0이면 무조건 0
-        out <= 0;      
-end
-endmodule
-1. 왜 ReLU 입력 폭이 2×dataWidth인가?
+		always @(posedge clk)
+		begin
+		    if($signed(x) >= 0) //x>=0이면 그대로 전달 (x를 2's complement signed값으로 해석)
+		    begin
+		        if(|x[2*dataWidth-1-:weightIntWidth+1]) //over flow to sign bit of integer part
+		            out <= {1'b0,{(dataWidth-1){1'b1}}}; //positive saturate
+		        else
+		            out <= x[2*dataWidth-1-weightIntWidth-:dataWidth];
+		    end
+		    else                //x<0이면 무조건 0
+		        out <= 0;      
+		end
+		endmodule
+  
+- 1️⃣ 왜 ReLU 입력 폭이 2×dataWidth인가?
+	- 뉴런 내부에서는 input × weight (곱셈), sum + bias (누산)
+	- 이 과정에서 정수부가 확장되므로 dataWidth=8이라도 결과는 16bit 필요
+	- 따라서 ReLU 입력 x는 input [2*dataWidth-1:0] x // ex) [15:0]
 
-뉴런 내부에서는 input × weight (곱셈), sum + bias (누산)
-
-이 과정에서 정수부가 확장되므로 dataWidth=8이라도 결과는 16bit 필요
-
-따라서 ReLU 입력 x는 input [2*dataWidth-1:0] x // ex) [15:0]
-
-​
-
-2. ReLU 출력은 왜 다시 dataWidth(8bit)인가?
-
-다음 layer의 입력 인터페이스 폭은 항상 dataWidth로 고정
-
-만약 16bit를 그대로 넘기면, 다음 layer의 비트 폭이 선형적으로 증가
-
-그래서 ReLU에서 scaled-down (re-quantization) 수행
+- 2️⃣ ReLU 출력은 왜 다시 dataWidth(8bit)인가?
+	- 다음 layer의 입력 인터페이스 폭은 항상 dataWidth로 고정
+	- 만약 16bit를 그대로 넘기면, 다음 layer의 비트 폭이 선형적으로 증가
+	- 그래서 ReLU에서 scaled-down (re-quantization) 수행
 
 ​
 
-3. ReLU 입력 x의 비트 구간 의미
+- 3️⃣ ReLU 입력 x의 비트 구간 의미
+	-dataWidth=8, weightIntWidth=4 기준:
 
-dataWidth=8, weightIntWidth=4 기준:
-
-x[15:12] | x[11:4] | x[3:0]
-
-x[11:4] : 다음 layer로 전달할 실제 output (8bit)
-
-x[3:0] : 소수부 LSB → truncation으로 제거
-
-x[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
+			x[15:12] | x[11:4] | x[3:0]
+			x[11:4] : 다음 layer로 전달할 실제 output (8bit)
+			x[3:0] : 소수부 LSB → truncation으로 제거
+			x[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
 
 ​
+- 4️⃣ Overflow 판단과 Saturation
 
-4. Overflow 판단과 Saturation
+		if(|x[2*dataWidth-1-:weightIntWidth+1]) out <= {1'b0,{(dataWidth-1){1'b1}}};
+		dataWidth=8 → |x[15-:5]=|x[15:11]와 같은 의미
 
-if(|x[2*dataWidth-1-:weightIntWidth+1]) out <= {1'b0,{(dataWidth-1){1'b1}}};
-
-dataWidth=8 → |x[15-:5]=|x[15:11]와 같은 의미
-
-상위 비트 중 하나라도 1이면, 출력 8bit로 표현 불가하므로, 최대 양수값(0x7F)으로 saturation
-
-⚠️ 단, overflow는 x[15:12]가 기준이지만, 현재 구현은 x[11]를 포함한 보수적 saturation 정책을 사용
+	- 상위 비트 중 하나라도 1이면, 출력 8bit로 표현 불가하므로, 최대 양수값(0x7F)으로 saturation
+	- ⚠️ 단, overflow는 x[15:12]가 기준이지만, 현재 구현은 x[11]를 포함한 보수적 saturation 정책을 사용
 
 ​
 
