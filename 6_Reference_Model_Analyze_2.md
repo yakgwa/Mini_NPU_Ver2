@@ -137,9 +137,7 @@
 	- Sig_ROM은 입력 x(signed)를 ROM 주소 y (unsigned)로 매핑한다.
 
 			always @(posedge clk) begin 
-			
 			        if($signed(x) >= 0) y <= x + (2**(inWidth-1)); 
-			
 			        else y <= x - (2**(inWidth-1)); end assign out = mem[y]; 
 
 	- ROM 주소 공간은 0 ~ 2^inWidth-1
@@ -150,11 +148,8 @@
 	- Neuron.v에서 Sig_ROM Instantiation 확인
 
 			Sig_ROM #(.inWidth(sigmoidSize), .dataWidth(dataWidth)) s1(
-			
 			     .clk(clk), 
-			
 			     .x(sum[2*dataWidth-1-:sigmoidSize]), 
-			
 			     .out(out) ); 
 
 	- 즉, sigmoid 입력으로 들어가는 x는 MAC 결과 sum의 상위 비트 sigmoidSize(=10)개만 잘라서 넣는다.
@@ -222,9 +217,7 @@
 - 3️⃣ Pre-Trained vs Trained 모드
 
 		initial begin
-		
 		  $readmemb(weightFile, mem);
-		
 		end
 
 	- Weight를 ROM처럼 사용하여, 시뮬레이션/합성 시작 시, *.mif 파일로 초기화한다.
@@ -234,13 +227,9 @@
 - 4️⃣ 뉴런의 weight 요청
 
 		always @(posedge clk)
-		
 		begin
-		
 		  if (ren)
-		
 		    wout <= mem[radd];
-		
 		end
 
 	- ren=1 일 때만, wout으로 출력을 갱신한다.
