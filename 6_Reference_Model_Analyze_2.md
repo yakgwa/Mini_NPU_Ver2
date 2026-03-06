@@ -70,27 +70,19 @@
 		dataWidth=8 → |x[15-:5]=|x[15:11]와 같은 의미
 
 	- 상위 비트 중 하나라도 1이면, 출력 8bit로 표현 불가하므로, 최대 양수값(0x7F)으로 saturation
-	- ⚠️ 단, overflow는 x[15:12]가 기준이지만, 현재 구현은 x[11]를 포함한 보수적 saturation 정책을 사용
+	- ⚠️ 단, overflow는 x[15:12]가 기준이지만, 현재 구현은 x[11]를 포함한 보수적 saturation 정책을 사용​
 
-​
+- 5️⃣ Overflow가 없을 때 출력 비트 선택
+		
+		out <= x[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → out = x[11:4] 
 
-5. Overflow가 없을 때 출력 비트 선택
+	- 정수부 위치를 기준으로 비트 정렬(alignment)
 
-out <= x[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → out = x[11:4] 
+	- 단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지
 
-정수부 위치를 기준으로 비트 정렬(alignment)
-
-단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지
-
-​
-
-6. LSB(x[3:0])는 버려짐
-
-LSB는 fixed-point의 소수부에 해당
-
-그러나, 다음 layer는 8bit 입력만 사용하므로, 이를 비트 폭이 늘어나는 것을 막고, inference 과정은 weight 양자화 노이즈/activation 비선형성/상대적 크기 비교(hardmax)라는 점에서 근사화한다.
-
-​
+- 6️⃣ LSB(x[3:0])는 버려짐
+	- LSB는 fixed-point의 소수부에 해당
+	- 그러나, 다음 layer는 8bit 입력만 사용하므로, 이를 비트 폭이 늘어나는 것을 막고, inference 과정은 weight 양자화 노이즈/activation 비선형성/상대적 크기 비교(hardmax)라는 점에서 근사화한다.
 
 ●Sigmoid
 
