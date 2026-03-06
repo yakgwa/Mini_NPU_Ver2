@@ -18,16 +18,16 @@
     `define sigmoidSize 10
     `define weightIntWidth 4
 
-1. Activation Function
+✅ Activation Function
 
-●ReLU
+- ReLU
 
-module ReLU  #(parameter dataWidth=16,weightIntWidth=4) ( 
-//include.v에 의해 module instantiation 시, dataWidth=8
-    input           clk,
-    input   [2*dataWidth-1:0]   x,  
-    output  reg [dataWidth-1:0]  out
-);
+		module ReLU  #(parameter dataWidth=16,weightIntWidth=4) ( 
+		//include.v에 의해 module instantiation 시, dataWidth=8
+		    input           clk,
+		    input   [2*dataWidth-1:0]   x,  
+		    output  reg [dataWidth-1:0]  out
+		);
 
 always @(posedge clk)
 begin
