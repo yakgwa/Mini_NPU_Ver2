@@ -84,195 +84,167 @@
 	- LSB는 fixed-point의 소수부에 해당
 	- 그러나, 다음 layer는 8bit 입력만 사용하므로, 이를 비트 폭이 늘어나는 것을 막고, inference 과정은 weight 양자화 노이즈/activation 비선형성/상대적 크기 비교(hardmax)라는 점에서 근사화한다.
 
-●Sigmoid
+- Sigmoid
 
-module Sig_ROM #(parameter inWidth=10, dataWidth=16) (
-    input           clk,
-    input   [inWidth-1:0]   x,
-    output  [dataWidth-1:0]  out
-    );
-    
-    reg [dataWidth-1:0] mem [2**inWidth-1:0];
-    reg [inWidth-1:0] y;
-	
-	initial
-	begin
-		$readmemb("sigContent.mif",mem);
-	end
-    
-    always @(posedge clk)
-    begin
-        if($signed(x) >= 0)
-            y <= x+(2**(inWidth-1));
-        else 
-            y <= x-(2**(inWidth-1));      
-    end
-    
-    assign out = mem[y];
-    
-endmodule
-1. 실시간 연산이 너무 무겁다
-
-sigmoid(x) = 1 / (1 + e^{-x}) 
-
-즉, 지수함수와 나눗셈이 필요해서 FPGA에서 실시간 연산으로 구현하면 자원/지연이 매우 큼
-
-따라서 ZyNet은 ROM(LUT) 기반으로 근사
-
-​
-
-2. sigContent.mif의 역할: “sigmoid 함수표”
-
-sigmoid LUT의 값들을 미리 계산해 파일로 저장해둔 것이 sigContent.mif
-
-Sig_ROM 내부에서 sigContent.mif를 $readmemb로 읽어 ROM 초기화
-
-즉, sigContent.mif = sigmoid 값을 근사화한 값이 들어있는 LUT
-
-​
-
-3. inWidth(=sigmoidSize=10)의 의미: 입력 폭이 아닌, LUT 해상도
-
-include.v에서 sigmoidSize = 10
-
-이 값은 “sigmoid 입력 데이터 폭”이라기보다, LUT 주소 폭에 해당하므로 이를 통해 해상도를 결정
-
-inWidth가 10이면, 주소 개수 = 2^10 = 1024이므로, ROM 엔트리 = 1024개가 됨
-
-Sig_ROM 내부 구조
-
-ROM 배열 : reg [dataWidth-1:0] mem [2**inWidth-1:0]; 
-
-주소 레지스터 : reg [inWidth-1:0] y; 
-
-​
-
-4. Sig_ROM에서 주소(y) 만드는 방식 (signed 입력 처리)
-
-Sig_ROM은 입력 x(signed)를 ROM 주소 y (unsigned)로 매핑한다.
-
-always @(posedge clk) begin 
-
-        if($signed(x) >= 0) y <= x + (2**(inWidth-1)); 
-
-        else y <= x - (2**(inWidth-1)); end assign out = mem[y]; 
-
-ROM 주소 공간은 0 ~ 2^inWidth-1
-
-signed 입력 x를 그대로 쓰면 음수 주소가 나오므로, ± 2^(inWidth-1) 만큼 이동시켜 중앙을 0 근처로 맞추는(offset) 방식을 쓴다.
-
-최종 출력은 out = mem[y] 
-
-​
-
-5. 그럼 sigmoid의 “실제 입력 x”는 어디서 오나?
-
-Neuron.v에서 Sig_ROM Instantiation 확인
-
-Sig_ROM #(.inWidth(sigmoidSize), .dataWidth(dataWidth)) s1(
-
-     .clk(clk), 
-
-     .x(sum[2*dataWidth-1-:sigmoidSize]), 
-
-     .out(out) ); 
-
-즉, sigmoid 입력으로 들어가는 x는 MAC 결과 sum의 상위 비트 sigmoidSize(=10)개만 잘라서 넣는다.
-
-2. Weight_Memory.v - 각 뉴런이 사용하는 가중치 저장/제공 전용 메모리 블록
-
-`include "include.v"
-
-module Weight_Memory #(parameter numWeight = 3, neuronNo=5,layerNo=1,
-                       addressWidth=10,dataWidth=16,weightFile="w_1_15.mif") 
-    ( 
-    input clk,
-    input wen,
-    input ren,
-    input [addressWidth-1:0] wadd,
-    input [addressWidth-1:0] radd,
-    input [dataWidth-1:0] win,
-    output reg [dataWidth-1:0] wout);
-    
-    reg [dataWidth-1:0] mem [numWeight-1:0];
-
-    `ifdef pretrained
-        initial begin
-	        $readmemb(weightFile, mem);
-	    end
-	`else
-		always @(posedge clk)
-		begin
-			if (wen)
+		module Sig_ROM #(parameter inWidth=10, dataWidth=16) (
+		    input           clk,
+		    input   [inWidth-1:0]   x,
+		    output  [dataWidth-1:0]  out
+		    );
+		    
+		    reg [dataWidth-1:0] mem [2**inWidth-1:0];
+		    reg [inWidth-1:0] y;
+			
+			initial
 			begin
-				mem[wadd] <= win;
+				$readmemb("sigContent.mif",mem);
 			end
-		end 
-    `endif
-    
-    always @(posedge clk)
-    begin
-        if (ren)
-        begin
-            wout <= mem[radd];
-        end
-    end 
-endmodule
-1. 파라미터 구조
+		    
+		    always @(posedge clk)
+		    begin
+		        if($signed(x) >= 0)
+		            y <= x+(2**(inWidth-1));
+		        else 
+		            y <= x-(2**(inWidth-1));      
+		    end
+		    
+		    assign out = mem[y];
+		    
+		endmodule
+  
+- 1️⃣ 실시간 연산이 너무 무겁다
 
-parameter
+		sigmoid(x) = 1 / (1 + e^{-x}) 
 
-  numWeight   = 3,     // 해당 뉴런이 가지는 가중치 개수 (layer 1이면 784개)
+	- 즉, 지수함수와 나눗셈이 필요해서 FPGA에서 실시간 연산으로 구현하면 자원/지연이 매우 큼
+	- 따라서 ZyNet은 ROM(LUT) 기반으로 근사
 
-  neuronNo    = 5,      // 뉴런 번호 (파일 구분용)
+- 2️⃣ sigContent.mif의 역할: “sigmoid 함수표”
+	- sigmoid LUT의 값들을 미리 계산해 파일로 저장해둔 것이 sigContent.mif
+	- Sig_ROM 내부에서 sigContent.mif를 $readmemb로 읽어 ROM 초기화
+	- 즉, sigContent.mif = sigmoid 값을 근사화한 값이 들어있는 LUT
 
-  layerNo     = 1,        // 레이어 번호 (파일 구분용)
+- 3️⃣ inWidth(=sigmoidSize=10)의 의미: 입력 폭이 아닌, LUT 해상도
+	- include.v에서 sigmoidSize = 10
+	- 이 값은 “sigmoid 입력 데이터 폭”이라기보다, LUT 주소 폭에 해당하므로 이를 통해 해상도를 결정
+	- inWidth가 10이면, 주소 개수 = 2^10 = 1024이므로, ROM 엔트리 = 1024개가 됨
 
-  addressWidth= 10, // 주소 폭 (메모리에서 '몇 번째 칸을 읽을기' 지정하기 위한 주소 비트 수=주소 수)
+			Sig_ROM 내부 구조
+			ROM 배열 : reg [dataWidth-1:0] mem [2**inWidth-1:0]; 
+			주소 레지스터 : reg [inWidth-1:0] y; 
+​
+- 4️⃣ Sig_ROM에서 주소(y) 만드는 방식 (signed 입력 처리)
+	- Sig_ROM은 입력 x(signed)를 ROM 주소 y (unsigned)로 매핑한다.
 
-  dataWidth   = 16,    // 가중치 비트 폭
+			always @(posedge clk) begin 
+			
+			        if($signed(x) >= 0) y <= x + (2**(inWidth-1)); 
+			
+			        else y <= x - (2**(inWidth-1)); end assign out = mem[y]; 
 
-  weightFile  = "w_1_15.mif"
+	- ROM 주소 공간은 0 ~ 2^inWidth-1
+	- signed 입력 x를 그대로 쓰면 음수 주소가 나오므로, ± 2^(inWidth-1) 만큼 이동시켜 중앙을 0 근처로 맞추는(offset) 방식을 쓴다.
+	- 최종 출력은 out = mem[y] 
+
+- 5️⃣ 그럼 sigmoid의 “실제 입력 x”는 어디서 오나?
+	- Neuron.v에서 Sig_ROM Instantiation 확인
+
+			Sig_ROM #(.inWidth(sigmoidSize), .dataWidth(dataWidth)) s1(
+			
+			     .clk(clk), 
+			
+			     .x(sum[2*dataWidth-1-:sigmoidSize]), 
+			
+			     .out(out) ); 
+
+	- 즉, sigmoid 입력으로 들어가는 x는 MAC 결과 sum의 상위 비트 sigmoidSize(=10)개만 잘라서 넣는다.
+
+✅ Weight_Memory.v - 각 뉴런이 사용하는 가중치 저장/제공 전용 메모리 블록
+
+		`include "include.v"
+		
+		module Weight_Memory #(parameter numWeight = 3, neuronNo=5,layerNo=1,
+		                       addressWidth=10,dataWidth=16,weightFile="w_1_15.mif") 
+		    ( 
+		    input clk,
+		    input wen,
+		    input ren,
+		    input [addressWidth-1:0] wadd,
+		    input [addressWidth-1:0] radd,
+		    input [dataWidth-1:0] win,
+		    output reg [dataWidth-1:0] wout);
+		    
+		    reg [dataWidth-1:0] mem [numWeight-1:0];
+		
+		    `ifdef pretrained
+		        initial begin
+			        $readmemb(weightFile, mem);
+			    end
+			`else
+				always @(posedge clk)
+				begin
+					if (wen)
+					begin
+						mem[wadd] <= win;
+					end
+				end 
+		    `endif
+		    
+		    always @(posedge clk)
+		    begin
+		        if (ren)
+		        begin
+		            wout <= mem[radd];
+		        end
+		    end 
+		endmodule
+		
+- 1️⃣ 파라미터 구조
+
+		parameter
+		  numWeight   = 3,     // 해당 뉴런이 가지는 가중치 개수 (layer 1이면 784개)
+		  neuronNo    = 5,      // 뉴런 번호 (파일 구분용)
+		  layerNo     = 1,        // 레이어 번호 (파일 구분용)
+		  addressWidth= 10, // 주소 폭 (메모리에서 '몇 번째 칸을 읽을기' 지정하기 위한 주소 비트 수=주소 수)
+		  dataWidth   = 16,    // 가중치 비트 폭
+		  weightFile  = "w_1_15.mif"
+
+- 2️⃣ 내부 메모리 구조
+	- 1차원 메모리 배열로, 각 엔트리에 하나의 weight가 들어간다.
+
+			reg [dataWidth-1:0] mem [numWeight-1:0];
+
+			mem[0]   → weight 0
+			mem[1]   → weight 1
+			...
+			mem[n]   → weight n
+   
+- 3️⃣ Pre-Trained vs Trained 모드
+
+		initial begin
+		
+		  $readmemb(weightFile, mem);
+		
+		end
+
+	- Weight를 ROM처럼 사용하여, 시뮬레이션/합성 시작 시, *.mif 파일로 초기화한다.
 
 ​
 
-2. 내부 메모리 구조
+- 4️⃣ 뉴런의 weight 요청
 
-1차원 메모리 배열로, 각 엔트리에 하나의 weight가 들어간다.
+		always @(posedge clk)
+		
+		begin
+		
+		  if (ren)
+		
+		    wout <= mem[radd];
+		
+		end
 
-reg [dataWidth-1:0] mem [numWeight-1:0];
-
-mem[0]   → weight 0
-mem[1]   → weight 1
-...
-mem[n]   → weight n
-3. Pre-Trained vs Trained 모드
-
-initial begin
-
-  $readmemb(weightFile, mem);
-
-end
-
-Weight를 ROM처럼 사용하여, 시뮬레이션/합성 시작 시, *.mif 파일로 초기화한다.
-
-​
-
-4. 뉴런의 weight 요청
-
-always @(posedge clk)
-
-begin
-
-  if (ren)
-
-    wout <= mem[radd];
-
-end
-
-ren=1 일 때만, wout으로 출력을 갱신한다.
-
-즉, 뉴런 내부에서는 Input data valid (ren=1) → next rising clock에서 wout 수신 → MAC 연산 수행
+	- ren=1 일 때만, wout으로 출력을 갱신한다.
+	- 즉, 뉴런 내부에서는 Input data valid (ren=1) → next rising clock에서 wout 수신 → MAC 연산 수행
 
 3. Neuron.v - FC 뉴런 1개를 구현
 
