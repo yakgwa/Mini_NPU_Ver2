@@ -793,3 +793,8 @@
 	- count_1 <= count_1 + 1 : 몇 개 보냈는지 증가
 	- data_out_valid_1 <= 1 : SEND 동안은 매 클록 유효
 	- 즉, x1_out의 구성 순서가 x1_out[dataWidth-1:0] = 0번 뉴런 출력, x1_out[2*dataWidth-1:dataWidth] = 1번 뉴런 출력 ... 이런 식으로 “LSB부터 뉴런0,1,2…” 라는 가정
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_10.png" width="400"/>
+
+<div align="left">
+
