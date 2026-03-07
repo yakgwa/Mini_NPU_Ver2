@@ -71,6 +71,9 @@
     <td colspan="3" style="text-align: center;"><strong>합계(mul+add를 op 2개로 보면 48,640 ops</strong></td>
     <td><strong>24,320 MAC/inf</strong></td>  
   </tr>
+  <tr>
+    <td colspan="4" style="text-align: center;"><strong>Layer2, Layer3는 784 클록 주기 대비 상당히 짧게만 동작하여, 자원 활용이 충분히 이루어지지 않음.(Layer2 : 30 cycle / 784 cycle = 약 3.8%, Layer3 : 20 cycle / 784 cycle = 약 2.6%)</strong></td>
+  </tr>  
 </table>
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_4.png" width="400"/>
