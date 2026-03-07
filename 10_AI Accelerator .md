@@ -206,12 +206,38 @@
             //                               ↓     ↓      ↓      ↓
             // a_data[3] → a_conn[3][0] →  PE  →  PE  →  PE  →  PE
 
+- Testbench
 
+        `timescale 1ns / 1ps
+        
+        module tb_systolic_array_2d;
+        
+          localparam int K_DIM  = 4;
+          localparam int DATA_W = 8;
+          localparam int ACC_W  = 2*DATA_W + $clog2(K_DIM);
+          localparam int ROWS   = 4;
+          localparam int COLS   = 4;
+        
+          //==========================================================
+          // Step 1) Interface Definition
+          //==========================================================
+          logic                    clk;
+          logic                    rst_n;
+          logic                    clr;
+          logic                    en;
+        
+          logic [DATA_W-1:0]       a_in_row   [0:ROWS-1];
+          logic [DATA_W-1:0]       b_in_col   [0:COLS-1];
+        
+          logic [ROWS*DATA_W-1:0]  a_in_row_flat;
+          logic [COLS*DATA_W-1:0]  b_in_col_flat;
+        
+          logic [ROWS*COLS*ACC_W-1:0] pe_mul;
+          logic [ROWS*COLS*ACC_W-1:0] pe_acc_sum;
 
-
-
-
-
+     - Step 1) Parameter + Interface Definition
+       - DUT를 4X4 Array로 잡았기 때문에, PE 내부에서는 총 4번의 누산(K_DIM)이 반복된다. 이에 따라 ACC_W 역시 단순히 2*DATA_W가 아닌, 그 반복되는 누산으로 커지는 비트폭을 고려해야 하므로, $clog2(K_DIM)을 추가적으로 더해준다.
+       - Interface 정의에서의 가장 중요한 포인트는 가독성 및 Skew 주입 시 Indexing이 편한 Unpacked Array(a_in_row, b_in_col)과 DUT는 flat bus로 받아 TB에서 packing이 필요하므로 Packed Array(a_in_row_flat, b_in_col_flat, pe_mul, pe_acc_sum)을 동시에 선언한다. 
 
 
 
