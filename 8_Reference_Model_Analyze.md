@@ -133,6 +133,8 @@
 
 <div align="left">
 
+<br>
+
   🚀 1D (1-dimension) 1×2 PE Chain
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_11.png" width="400"/>
