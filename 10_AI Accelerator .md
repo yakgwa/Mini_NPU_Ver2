@@ -42,17 +42,16 @@
 
     - pe_systolic_cell은 기존에 최초 제시된 mac_pe와는 다르게, 연산기(mac_pe) + 입력 전달 목적 pipe register + next cell interconnect까지 포함된 Systolic Array용 PE cell이라고 요약할 수 있다. 
  
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            a_reg <= 0;
-            b_reg <= 0;
-        end else if (en) begin
-            a_reg <= a_in;
-            b_reg <= b_in;
-        end
-    end
+            always @(posedge clk or negedge rst_n) begin
+                if (!rst_n) begin
+                    a_reg <= 0;
+                    b_reg <= 0;
+                end else if (en) begin
+                    a_reg <= a_in;
+                    b_reg <= b_in;
+                end
+            end
 
-    - Step 2) Constrained Random Transaction
-      - dist로 확률 가중치를 두어 constraint random 값을 mac_txn class로 정의
-      - clr dist {1 := 5, 0 := 95}; : 5% 가량 clr=1이 생성되도록 constraint
-      - en  dist {1 := 50, 0 := 50}; : 50% 가량 en=1이 생성되도록 constraint
+    - 특히, 위 입력 레지스터 업데이트의 의미를 정확히 분석하면 다음과 같다.
+     - (1) Reset : rst_n=0이면, a_reg/b_reg <= 0, 셀 전체 스트림이 0으로 초기화
+     - (2) enable : en==1일 때만 a_in/b_in <= a_in/b_in, en==0이면 값 유지(hold), 결과적으로 셀은 en에 의해 “데이터 흐름을 멈추거나 흘릴 수 있는” 게이트 역할
