@@ -51,9 +51,7 @@
 - 2️⃣ ReLU 출력은 왜 다시 dataWidth(8bit)인가?
 	- 다음 layer의 입력 인터페이스 폭은 항상 dataWidth로 고정
 	- 만약 16bit를 그대로 넘기면, 다음 layer의 비트 폭이 선형적으로 증가
-	- 그래서 ReLU에서 scaled-down (re-quantization) 수행
-
-​
+	- 그래서 ReLU에서 scaled-down (re-quantization) 수행​
 
 - 3️⃣ ReLU 입력 x의 비트 구간 의미
 	-dataWidth=8, weightIntWidth=4 기준:
@@ -62,7 +60,6 @@
 			x[11:4] : 다음 layer로 전달할 실제 output (8bit)
 			x[3:0] : 소수부 LSB → truncation으로 제거
 			x[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
-
 ​
 - 4️⃣ Overflow 판단과 Saturation
 
