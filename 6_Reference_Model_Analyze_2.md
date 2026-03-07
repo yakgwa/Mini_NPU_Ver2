@@ -639,14 +639,11 @@
 		    end
 		end
 
-inDataBuffer[counter*inputWidth+:inputWidth] :
-counter=1 → [16 +: 16] = bits [31:16] = 1번 원소
-
-counter=2 → bits [47:32] = 2번 원소
-
-...
-
-counter=0은 원래 초기화에서 이미 처리했기 때문에 여기서는 1부터 진행
+	- inDataBuffer[counter*inputWidth+:inputWidth] :
+	- counter=1 → [16 +: 16] = bits [31:16] = 1번 원소
+	- counter=2 → bits [47:32] = 2번 원소
+	- ...
+	- counter=0은 원래 초기화에서 이미 처리했기 때문에 여기서는 1부터 진행
 
 5. Layer1.v (2, 3 생략)
 
