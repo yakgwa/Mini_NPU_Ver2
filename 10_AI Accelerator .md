@@ -736,57 +736,23 @@ Testcase 0th 손계산 추가 검증
 ### Hardware 관점에서 Verilog 문법 재정리
 
 - 1️⃣ Packed vs. Unpacked Array
- - Packed는 하나의 덩어리(Bus), Unpacked는 여러 개의 낱개(Collection)
+  - Packed는 하나의 덩어리(Bus), Unpacked는 여러 개의 낱개(Collection)
 
-구분
+|구분|문법 예시|메모리 구조|하드웨어 매핑|
+| :---: | :---: | :---:| :---:|
+|**Packed**|**logic [7:0] a;**|**연속된 비트**|**단일 버스 / 레지스터**|
+|**UnPacked**|**logic a [7:0];**|**독립된 워드**|**독립 신호 / 배열**|
+|**Mixed**|**logic [7:0] a [3:0];**|**비트의 묶음**|**8비트 슬롯이 4개**|
 
-문법 예시
+  - Packed (logic [7:0] data)
+   - 연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
+   - 용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
+   - 비유: 8차선 고속도로 (한 번에 데이터가 흐름).
 
-메모리 구조
-
-하드웨어 매핑
-
-Packed
-
-logic [7:0] a;
-
-연속된 비트
-
-단일 버스 / 레지스터
-
-Unpacked
-
-logic a [7:0];
-
-독립된 워드
-
-독립 신호 / 배열
-
-Mixed
-
-logic [7:0] a [3:0];
-
-비트의 묶음
-
-8비트 슬롯이 4개 
-
-Packed (logic [7:0] data)
-
-연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
-
-용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
-
-비유: 8차선 고속도로 (한 번에 데이터가 흐름).
-
-Unpacked (logic [7:0] data [0:3])
-
-연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
-
-용도: Systolic Array의 PE 집합, FIFO 버퍼, 메모리 뱅크.
-
-비유: 4개의 독립된 1차선 도로 (각자 따로 움직임).
-
-​
+  - Unpacked (logic [7:0] data [0:3])
+   - 연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
+   - 용도: Systolic Array의 PE 집합, FIFO 버퍼, 메모리 뱅크.
+    - 비유: 4개의 독립된 1차선 도로 (각자 따로 움직임).
 
 2. Wire vs. Reg
 
