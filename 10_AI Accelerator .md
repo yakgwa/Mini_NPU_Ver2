@@ -399,14 +399,14 @@
      - Step 5) Main (Driver)
        - drive_skew_cycle : Data Skew, a_in_row, b_in_col을 한 사이클 분량으로 세팅하는 입력 스케줄러
         
-            for (int r=0; r<ROWS; r++) begin
-              int kA = t - r;
-              if ((kA >= 0) && (kA < K_DIM)) a_in_row[r] = sa.A[r][kA];
-              //kA가 유효한 인덱스(0~K_DIM-1) 안에 들어오면 실제 A 값 주입하고, 아니면 0 주입
-              //이때, testcase에서 랜덤으로 생성된 행렬 A의 원소를 시간에 맞춰 보내게 됨
-              else                           a_in_row[r] = '0;
-            end
-        //b_in_col도 마찬가지
+                    for (int r=0; r<ROWS; r++) begin
+                      int kA = t - r;
+                      if ((kA >= 0) && (kA < K_DIM)) a_in_row[r] = sa.A[r][kA];
+                      //kA가 유효한 인덱스(0~K_DIM-1) 안에 들어오면 실제 A 값 주입하고, 아니면 0 주입
+                      //이때, testcase에서 랜덤으로 생성된 행렬 A의 원소를 시간에 맞춰 보내게 됨
+                      else                           a_in_row[r] = '0;
+                    end
+                //b_in_col도 마찬가지
 
        - 같은 시간 t에 대해 row(ROWS)가 커질수록 입력이 늦게 들어가도록 한다.
        - row 0: kA = t
