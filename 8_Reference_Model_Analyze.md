@@ -124,48 +124,13 @@
 
 ​- 3️⃣ 성능 비교를 위한 Notation
 
-$n번째\ sample\ :\ x_n^{\left(1\right)}\ \sim \ x_n^{\left(784\right)}\ \left(MNIST\ Dataset\right)$n번째 sample : x
-(1)
-n​ ~ x
-(784)
-n​ (MNIST Dataset)​
-$$​
-$Layer1\ Neuron"s\ Weight,\ Neuron\ m\ weight\ :\ w_m^{\left(1\right)}\ \sim \ w_m^{\left(784\right)}$Layer1 Neuron′s Weight, Neuron m weight : w
-(1)
-m​ ~ w
-(784)
-m​​
-$Layer2\ Neuron"s\ Weight,\ Neuron\ m\ weight\ :\ w_m^{\left(1\right)}\ \sim \ w_m^{\left(30\right)}$Layer2 Neuron′s Weight, Neuron m weight : w
-(1)
-m​ ~ w
-(30)
-m​​
-$Layer3\ Neuron"s\ Weight,\ Neuron\ m\ weight\ :\ w_m^{\left(1\right)}\ \sim \ w_m^{\left(20\right)}$Layer3 Neuron′s Weight, Neuron m weight : w
-(1)
-m​ ~ w
-(20)
-m​​
-$$​
-$Layer1\ output\ :\ Y_1^{\left(1\right)}\ \sim \ Y_1^{\left(30\right)}$Layer1 output : Y
-(1)
-1​ ~ Y
-(30)
-1​​
-$Layer2\ output\ :\ Y_1^{\left(1\right)}\ \sim \ Y_1^{\left(20\right)}$Layer2 output : Y
-(1)
-1​ ~ Y
-(20)
-1​​
-$Layer3\ output\ :\ Y_1^{\left(1\right)}\ \sim \ Y_1^{\left(10\right)}$Layer3 output : Y
-(1)
-1​ ~ Y
-(10)
-1​​
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_23.png" width="400"/>
+
 아래는 “면적을 줄이기 위해 PE를 줄이고(1D Chain), 또는 2D Systolic Array로 확장했을 때”의 대략적인 latency/throughput 추정이다. 
 
-​
+<div align="left">
 
-1D (1-dimension) 1×2 PE Chain
+​ - 1D (1-dimension) 1×2 PE Chain
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_11.png" width="400"/>
 
