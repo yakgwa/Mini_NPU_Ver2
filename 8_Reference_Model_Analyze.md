@@ -1,104 +1,60 @@
 ## [Reference Model 문제점 파악/개선 모델 최초 제시] - MNIST 손글씨 데이터 인식 목적의 추론형 NPU
 
 ### 🔴 Reference Model, ZyNet의 문제점 파악 🔴
+- Performance1(Cycle & Latency/Throughput) 관점
+ - Layer 1 Cycle
+  - 784 cycle : 최초 Layer1 입력 시, in[783:0] (X0~X783)이 직렬로 stream
+  - 2 cycle : myinputValid → weight_valid → mult_valid(neuron.v)로 valid가 2번 밀림
+  - 2 cycle : muxValid_f → sigValid → outvalid(neuron.v)로 valid가 2번 밀림
+  - Layer1 출력 valid : 784 + 2 + 2 cycle 
 
-Performance1(Cycle & Latency/Throughput) 관점
+ - 직렬화 FSM1 + Layer 2 Cycle
+  - 1 cycle : o*_valid[0] → holdData<=x*_out으로 SEND 상태로 바꿈
+  - 30 cycle : Layer1의 출력 30개를 30클록에 걸쳐 Layer2로 흘림
+  - 2 cycle + 2cycle
+  - 직렬화 FSM + Layer2 출력 valid : 1 + 30 + 2 + 2 cycle
 
-Layer 1 Cycle
+ - 직렬화 FSM2 + Layer 3 Cycle
+  - 1 cycle + 20 cycle
+  - 2 cycle + 2cycle
+  - 직렬화 FSM + Layer2 출력 valid : 1 + 20 + 2 + 2 cycle
 
-784 cycle : 최초 Layer1 입력 시, in[783:0] (X0~X783)이 직렬로 stream
+ - maxFinder Cycle
+  - 10cycle
 
-2 cycle : myinputValid → weight_valid → mult_valid(neuron.v)로 valid가 2번 밀림
+👉 이론적인 사이클 분석 결과, 단순 연산 흐름만 고려할 경우 입력 스트림이 시작된 시점으로부터 약 858 cycle 이후에 최종 결과(out_valid)가 출력된다.
+👉 이때 Latency는 단순히 MAC 연산량에 의해서만 결정되는 것이 아니라, 레이어 간 결과를 전달하기 위해 수행되는 데이터 재포맷 및 직렬화 과정에 의해 크게 증가한다.
+👉 입력이 1 cycle당 1개의 stream 형태로 유입되며, 해당 입력은 내부에서 모든 뉴런으로 브로드캐스트되어 각 뉴런이 동일 입력에 대해 병렬로 누산 연산을 수행한다.
+👉 그러나 각 레이어의 출력은 벡터 형태로 생성된 이후, 직렬화 FSM을 통해 다시 스칼라 스트림으로 변환되어 다음 레이어로 전달된다. 이 과정에서 레이어마다 추가적인 사이클 오버헤드가 발생한다.
+👉 Throughput은 단위 시간당 처리 가능한 입력 샘플 수로 정의되며, 본 설계에서는 MNIST 이미지 한 장(in[783:0])의 처리율에 해당한다.
+👉 ZyNet 구조상 Layer2와 Layer3는 Layer1이 전체 입력(784 cycle)을 모두 처리하여 출력을 생성하기 전까지는 어떠한 연산도 수행할 수 없다.
+👉 결과적으로, 하나의 샘플에 대해 Layer1이 784 cycle 동안 연산을 수행한 이후, Layer2와 Layer3는 각각 30 cycle과 20 cycle 동안만 활성화된다.
+👉 이 동안 다음 입력 샘플은 다시 Layer1에서 784 cycle 동안 처리되며, 이 중 약 734 cycle(≈ 92.6%) 동안 Layer2와 Layer3는 유휴 상태(idle)로 남게 된다.
+👉 따라서 ZyNet의 steady-state throughput은 가장 연산량이 큰 Layer1에 의해 사실상 결정되며, Layer2와 Layer3의 하드웨어 자원은 throughput 관점에서 충분히 활용되지 못한다. 
 
-2 cycle : muxValid_f → sigValid → outvalid(neuron.v)로 valid가 2번 밀림
+- Performance2(TOPS, Memory) 관점
 
-Layer1 출력 valid : 784 + 2 + 2 cycle 
+<table>
+  <tr>
+    <td width="250px">레이어</td>
+    <td>Layer1</td>
+    <td>Layer2</td>    
+    <td>Layer3</td>   
+  </tr>
+  <tr>
+    <td><strong>Peak Memory Usage</strong></td>
+    <td><strong>4882MB</strong></td>
+  </tr>
+  <tr>
+    <td colspan="2" style="text-align: center;"><strong>100개 Data Sample에 대한 Accuracy : 99%</strong></td>
+  </tr>
+</table>
 
-직렬화 FSM1 + Layer 2 Cycle
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_4.png" width="400"/>
 
-1 cycle : o*_valid[0] → holdData<=x*_out으로 SEND 상태로 바꿈
+Power
 
-30 cycle : Layer1의 출력 30개를 30클록에 걸쳐 Layer2로 흘림
-
-2 cycle + 2cycle
-
-직렬화 FSM + Layer2 출력 valid : 1 + 30 + 2 + 2 cycle
-
-직렬화 FSM2 + Layer 3 Cycle
-
-1 cycle + 20 cycle
-
-2 cycle + 2cycle
-
-직렬화 FSM + Layer2 출력 valid : 1 + 20 + 2 + 2 cycle
-
-maxFinder Cycle
-
-10cycle
-
-이론적인 사이클 분석 결과, 단순 연산 흐름만 고려할 경우 입력 스트림이 시작된 시점으로부터 약 858 cycle 이후에 최종 결과(out_valid)가 출력된다.
-
-이때 Latency는 단순히 MAC 연산량에 의해서만 결정되는 것이 아니라, 레이어 간 결과를 전달하기 위해 수행되는 데이터 재포맷 및 직렬화 과정에 의해 크게 증가한다.
-
-입력이 1 cycle당 1개의 stream 형태로 유입되며, 해당 입력은 내부에서 모든 뉴런으로 브로드캐스트되어 각 뉴런이 동일 입력에 대해 병렬로 누산 연산을 수행한다.
-
-그러나 각 레이어의 출력은 벡터 형태로 생성된 이후, 직렬화 FSM을 통해 다시 스칼라 스트림으로 변환되어 다음 레이어로 전달된다. 이 과정에서 레이어마다 추가적인 사이클 오버헤드가 발생한다.
-
-Throughput은 단위 시간당 처리 가능한 입력 샘플 수로 정의되며, 본 설계에서는 MNIST 이미지 한 장(in[783:0])의 처리율에 해당한다.
-
-ZyNet 구조상 Layer2와 Layer3는 Layer1이 전체 입력(784 cycle)을 모두 처리하여 출력을 생성하기 전까지는 어떠한 연산도 수행할 수 없다.
-
-결과적으로, 하나의 샘플에 대해 Layer1이 784 cycle 동안 연산을 수행한 이후, Layer2와 Layer3는 각각 30 cycle과 20 cycle 동안만 활성화된다.
-
-이 동안 다음 입력 샘플은 다시 Layer1에서 784 cycle 동안 처리되며, 이 중 약 734 cycle(≈ 92.6%) 동안 Layer2와 Layer3는 유휴 상태(idle)로 남게 된다.
-
-따라서 ZyNet의 steady-state throughput은 가장 연산량이 큰 Layer1에 의해 사실상 결정되며, Layer2와 Layer3의 하드웨어 자원은 throughput 관점에서 충분히 활용되지 못한다. 
-
-​
-
-Performance2(TOPS, Memory) 관점
-
-레이어
-
-입력 수
-
-뉴런 수
-
-MAC 수
-
-Layer1
-
-784
-
-30
-
-23,520
-
-Layer2
-
-30
-
-20
-
-600
-
-Layer3
-
-20
-
-10
-
-200
-
-합계
-
-(mul+add를 op 2개로 보면 48,640 ops)
-
-24,320 MAC/inf
-
-Layer2, Layer3는 784 클록 주기 대비 상당히 짧게만 동작하여, 자원 활용이 충분히 이루어지지 않음.
-
-(Layer2 : 30 cycle / 784 cycle = 약 3.8%, Layer3 : 20 cycle / 784 cycle = 약 2.6%)
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_5.png" width="400"/>
 
 ZyNet은 가중치를 (784×30, 30×20, 20×10 …) 형태로 한 번 로딩해 각 뉴런의 로컬 Weight Memory에 저장해 둔다. 
 
