@@ -645,93 +645,123 @@
 	- ...
 	- counter=0은 원래 초기화에서 이미 처리했기 때문에 여기서는 1부터 진행
 
-5. Layer1.v (2, 3 생략)
+✅ Layer1.v (2, 3 생략)
 
-`timescale 1 ns / 1 ps
-module Layer_1 #(parameter NN = 30,numWeight=784,dataWidth=16,layerNum=1,
-                 sigmoidSize=10,weightIntWidth=4,actType="relu")
-    (
-    input           clk,
-    input           rst,
-    input           weightValid,
-    input           biasValid,
-    input [31:0]    weightValue,
-    input [31:0]    biasValue,
-    input [31:0]    config_layer_num,
-    input [31:0]    config_neuron_num,
-    input           x_valid,
-    input [dataWidth-1:0]    x_in,
-    output [NN-1:0]     o_valid,
-    output [NN*dataWidth-1:0]  x_out
-    );
-neuron #(.numWeight(numWeight),.layerNo(layerNum),.neuronNo(0),.dataWidth(dataWidth),
-         .sigmoidSize(sigmoidSize),.weightIntWidth(weightIntWidth),.actType(actType),
-          .weightFile("w_1_0.mif"),.biasFile("b_1_0.mif"))n_0(
-        .clk(clk),
-        .rst(rst),
-        .myinput(x_in),
-        .weightValid(weightValid),
-        .biasValid(biasValid),
-        .weightValue(weightValue),
-        .biasValue(biasValue),
-        .config_layer_num(config_layer_num),
-        .config_neuron_num(config_neuron_num),
-        .myinputValid(x_valid),
-        .out(x_out[0*dataWidth+:dataWidth]),
-        .outvalid(o_valid[0])
-        );
-.
-.
-.
-neuron #(.numWeight(numWeight),.layerNo(layerNum),.neuronNo(29),.dataWidth(dataWidth),
-         .sigmoidSize(sigmoidSize),.weightIntWidth(weightIntWidth),.actType(actType),
-         .weightFile("w_1_29.mif"),.biasFile("b_1_29.mif"))n_29(
-        .clk(clk),
-        .rst(rst),
-        .myinput(x_in),
-        .weightValid(weightValid),
-        .biasValid(biasValid),
-        .weightValue(weightValue),
-        .biasValue(biasValue),
-        .config_layer_num(config_layer_num),
-        .config_neuron_num(config_neuron_num),
-        .myinputValid(x_valid),
-        .out(x_out[29*dataWidth+:dataWidth]),
-        .outvalid(o_valid[29])
-        );
-endmodule
-6. ZyNet.v
+		`timescale 1 ns / 1 ps
+		module Layer_1 #(parameter NN = 30,numWeight=784,dataWidth=16,layerNum=1,
+		                 sigmoidSize=10,weightIntWidth=4,actType="relu")
+		    (
+		    input           clk,
+		    input           rst,
+		    input           weightValid,
+		    input           biasValid,
+		    input [31:0]    weightValue,
+		    input [31:0]    biasValue,
+		    input [31:0]    config_layer_num,
+		    input [31:0]    config_neuron_num,
+		    input           x_valid,
+		    input [dataWidth-1:0]    x_in,
+		    output [NN-1:0]     o_valid,
+		    output [NN*dataWidth-1:0]  x_out
+		    );
+		neuron #(.numWeight(numWeight),.layerNo(layerNum),.neuronNo(0),.dataWidth(dataWidth),
+		         .sigmoidSize(sigmoidSize),.weightIntWidth(weightIntWidth),.actType(actType),
+		          .weightFile("w_1_0.mif"),.biasFile("b_1_0.mif"))n_0(
+		        .clk(clk),
+		        .rst(rst),
+		        .myinput(x_in),
+		        .weightValid(weightValid),
+		        .biasValid(biasValid),
+		        .weightValue(weightValue),
+		        .biasValue(biasValue),
+		        .config_layer_num(config_layer_num),
+		        .config_neuron_num(config_neuron_num),
+		        .myinputValid(x_valid),
+		        .out(x_out[0*dataWidth+:dataWidth]),
+		        .outvalid(o_valid[0])
+		        );
+		.
+		.
+		.
+		neuron #(.numWeight(numWeight),.layerNo(layerNum),.neuronNo(29),.dataWidth(dataWidth),
+		         .sigmoidSize(sigmoidSize),.weightIntWidth(weightIntWidth),.actType(actType),
+		         .weightFile("w_1_29.mif"),.biasFile("b_1_29.mif"))n_29(
+		        .clk(clk),
+		        .rst(rst),
+		        .myinput(x_in),
+		        .weightValid(weightValid),
+		        .biasValid(biasValid),
+		        .weightValue(weightValue),
+		        .biasValue(biasValue),
+		        .config_layer_num(config_layer_num),
+		        .config_neuron_num(config_neuron_num),
+		        .myinputValid(x_valid),
+		        .out(x_out[29*dataWidth+:dataWidth]),
+		        .outvalid(o_valid[29])
+		        );
+		endmodule
+		
+✅ ZyNet.v
 
-module zyNet #(...) (...);
+		module zyNet #(...) (...);
+		
+		.
+		.
+		.
+		
+		localparam IDLE = 'd0,
+		           SEND = 'd1;
+		wire [`numNeuronLayer1-1:0] o1_valid;
+		wire [`numNeuronLayer1*`dataWidth-1:0] x1_out;
+		reg [`numNeuronLayer1*`dataWidth-1:0] holdData_1;
+		reg [`dataWidth-1:0] out_data_1;
+		reg data_out_valid_1;
+		
+		Layer_1 #(...) l1(...);
+		
+		//State machine for data pipelining
+		reg       state_1;
+		integer   count_1;
+		always @(posedge s_axi_aclk)
+		begin
+		    if(reset)
+		    begin
+		        state_1 <= IDLE;
+		        count_1 <= 0;
+		        data_out_valid_1 <=0;
+		    end
+		    else
+		    begin
+		        case(state_1)
+		            IDLE: begin
+		                count_1 <= 0;
+		                data_out_valid_1 <=0;
+		                if (o1_valid[0] == 1'b1)
+		                begin
+		                    holdData_1 <= x1_out;
+		                    state_1 <= SEND;
+		                end
+		            end
+		            SEND: begin
+		                out_data_1 <= holdData_1[`dataWidth-1:0];
+		                holdData_1 <= holdData_1>>`dataWidth;
+		                count_1 <= count_1 +1;
+		                data_out_valid_1 <= 1;
+		                if (count_1 == `numNeuronLayer1)
+		                begin
+		                    state_1 <= IDLE;
+		                    data_out_valid_1 <= 0;
+		                end
+		            end
+		        endcase
+		    end
+		end
+		.
+		.
+		.
 
-.
-.
-.
+- 1️⃣ FSM : IDLE 상태
 
-localparam IDLE = 'd0,
-           SEND = 'd1;
-wire [`numNeuronLayer1-1:0] o1_valid;
-wire [`numNeuronLayer1*`dataWidth-1:0] x1_out;
-reg [`numNeuronLayer1*`dataWidth-1:0] holdData_1;
-reg [`dataWidth-1:0] out_data_1;
-reg data_out_valid_1;
-
-Layer_1 #(...) l1(...);
-
-//State machine for data pipelining
-reg       state_1;
-integer   count_1;
-always @(posedge s_axi_aclk)
-begin
-    if(reset)
-    begin
-        state_1 <= IDLE;
-        count_1 <= 0;
-        data_out_valid_1 <=0;
-    end
-    else
-    begin
-        case(state_1)
             IDLE: begin
                 count_1 <= 0;
                 data_out_valid_1 <=0;
@@ -740,42 +770,6 @@ begin
                     holdData_1 <= x1_out;
                     state_1 <= SEND;
                 end
-            end
-            SEND: begin
-                out_data_1 <= holdData_1[`dataWidth-1:0];
-                holdData_1 <= holdData_1>>`dataWidth;
-                count_1 <= count_1 +1;
-                data_out_valid_1 <= 1;
-                if (count_1 == `numNeuronLayer1)
-                begin
-                    state_1 <= IDLE;
-                    data_out_valid_1 <= 0;
-                end
-            end
-        endcase
-    end
-end
-.
-.
-.
-1. FSM : IDLE 상태
-
-            IDLE: begin
-
-                count_1 <= 0;
-
-                data_out_valid_1 <=0;
-
-                if (o1_valid[0] == 1'b1)
-
-                begin
-
-                    holdData_1 <= x1_out;
-
-                    state_1 <= SEND;
-
-                end
-
             end
 
 매 클록 count_1=0, valid=0, o1_valid[0]==1이 되는 순간, holdData_1 <= x1_out로 병렬 출력 벡터를 버퍼에 캡처해서 상태를 SEND로 전환
