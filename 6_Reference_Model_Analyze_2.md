@@ -450,7 +450,7 @@
 		            bias <= {biasReg[addr][dataWidth-1:0],{dataWidth{1'b0}}};
 		        end
 
-- include.v에서 입력 비트 폭을 8bit로 정의하였고, 이때, Q.format의 정수부를 4bit로 정의하였다. 이에 대해 곱셈 결과 정수부는 MSB 8bit, 실수부는 LSB 8bit이므로, 정수인 bias를 더해주기 위해서는 8bit만큼 shift left해줄 필요가 있다. {biasReg[addr][dataWidth-1:0],{dataWidth{1'b0}}};의 의미는 곧, {biasValue[7:0],8'b0}이므로 biasValue << 8와 같은 효과를 준다. 예컨대, biasValue=0000_0011이라면, 실제 bias=0000_0011_0000_0000이다.
+	- include.v에서 입력 비트 폭을 8bit로 정의하였고, 이때, Q.format의 정수부를 4bit로 정의하였다. 이에 대해 곱셈 결과 정수부는 MSB 8bit, 실수부는 LSB 8bit이므로, 정수인 bias를 더해주기 위해서는 8bit만큼 shift left해줄 필요가 있다. {biasReg[addr][dataWidth-1:0],{dataWidth{1'b0}}};의 의미는 곧, {biasValue[7:0],8'b0}이므로 biasValue << 8와 같은 효과를 준다. 예컨대, biasValue=0000_0011이라면, 실제 bias=0000_0011_0000_0000이다.
 
 - 5️⃣ r_addr (read address) 카운터
 
@@ -471,7 +471,7 @@
 		  mul <= $signed(myinputd) * $signed(w_out);
 		end
 
-	- myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
+		- myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
 
 - 7️⃣ sum + saturation + bias add
 
