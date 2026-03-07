@@ -122,7 +122,7 @@
 - 2️⃣ 어레이 크기 선택
   - 어레이 크기에 대해 결론을 내리기 전에 반드시 고려해야 할 점이 있다. (1) Systolic Array를 작게 만들면 면적이 크게 줄지만, 그만큼 연산 병렬도가 낮아져 레이턴시가 길어질 수 밖에 없다. 즉, 면적은 어마어마하게 줄지만 1 sample에 대한 latency가 느려질 수 있다는 문제가 생긴다. 그래서 단일 샘플만 빠르게 끝내기보다는, 여러 샘플을 Systolic Array에 동시에 넣어(배치/스트리밍) latency는 길어도 처리량을 확보하는 방향이 설득력 있다. 또 하나 중요한 현실 제약은 (2) 데이터를 한 번에 가져올 수 있는 양이 한정적이라는 점이다. 이때 AMBA BUS Protocol(예: AXI 등)을 고려해야 하는데, 아직 AMBA/AXI를 본격적으로 배우진 않았더라도, “버스를 통해 한 번에 전송 가능한 폭/대역폭이 제한되어 결과적으로 아키텍처 선택이 제약된다”는 점은 언급하는 것이 타당하다. 또한 (3) Array를 키우면 처리량은 올라갈 수 있지만, 동시에 PE 간 배선 증가, clock skew, fmax 하락등으로 이어질 수 있어 면적/전력/타이밍의 trade-off를 함께 고려해야 한다. 
 
-​- 3️⃣ 성능 비교를 위한 Notation
+- 3️⃣ 성능 비교를 위한 Notation
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_23.png" width="400"/>
 
@@ -130,7 +130,7 @@
 
 <div align="left">
 
-​ - 1D (1-dimension) 1×2 PE Chain
+ - 1D (1-dimension) 1×2 PE Chain
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_11.png" width="400"/>
 
