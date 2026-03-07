@@ -239,6 +239,95 @@
        - DUT를 4X4 Array로 잡았기 때문에, PE 내부에서는 총 4번의 누산(K_DIM)이 반복된다. 이에 따라 ACC_W 역시 단순히 2*DATA_W가 아닌, 그 반복되는 누산으로 커지는 비트폭을 고려해야 하므로, $clog2(K_DIM)을 추가적으로 더해준다.
        - Interface 정의에서의 가장 중요한 포인트는 가독성 및 Skew 주입 시 Indexing이 편한 Unpacked Array(a_in_row, b_in_col)과 DUT는 flat bus로 받아 TB에서 packing이 필요하므로 Packed Array(a_in_row_flat, b_in_col_flat, pe_mul, pe_acc_sum)을 동시에 선언한다. 
 
+          //==========================================================
+          // Step 2) Constrained Random Transaction
+          //==========================================================
+          class sa_2d_txn;
+            rand bit [DATA_W-1:0] A [0:ROWS-1][0:K_DIM-1];
+            rand bit [DATA_W-1:0] B [0:K_DIM-1][0:COLS-1];
+        
+            rand bit              en;
+            rand bit              clr;
+        
+            constraint c_clr { clr dist {1 := 5, 0 := 95}; }
+            constraint c_en  { en  dist {1 := 50, 0 := 50}; }
+          endclass
+        
+          sa_2d_txn sa = new;
+        
+        //==========================================================
+        // Pack TB unpacked inputs -> DUT flat ports
+        //==========================================================
+          assign begin
+            a_in_row_flat = '0;
+            b_in_col_flat = '0;
+            for (int r=0; r<ROWS; r++) a_in_row_flat[r*DATA_W +: DATA_W] = a_in_row[r];
+            for (int c=0; c<COLS; c++) b_in_col_flat[c*DATA_W +: DATA_W] = b_in_col[c];
+          end
+
+     - Step 2) Constrained Random Transaction
+       - Golden Model 계산에 사용할 행렬 A(ROWS×K), B(K×COLS)를 랜덤 생성한다. 여기서 A,B는 한 testcase 동안 고정된 행렬이라고 보면 된다. (en, clr은 dist를 활용하여 가중치 랜덤 선언)
+       - (이와는 별개로 그 아래에 TB unpacked array(a_in_row, b_in_col) 값을 DUT 포트 형식으로 재구성하기 위해 DUT packed array(a_in_row_flat, b_in_col_flat)을 맵핑해준다.)
+
+          //==========================================================
+          // Step 3) Top Module Instantiation
+          //==========================================================
+          systolic_array_2d #(
+            ...
+          ) dut (
+            ...
+            .a_in_row   (a_in_row_flat), //packed array로 맵핑
+            .b_in_col   (b_in_col_flat), //packed array로 맵핑
+            ...
+          );
+        
+          //==========================================================
+          // Clock / Reset
+          //==========================================================
+          initial begin
+            clk = 1'b0;
+            forever #5 clk = ~clk; // 100MHz
+          end
+        
+          initial begin
+            rst_n = 1'b0;
+            clr  = 1'b0;
+            en   = 1'b0;
+        
+            for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
+            for (int c=0; c<COLS; c++) b_in_col[c] = '0;
+        
+            #30;
+            rst_n = 1'b1;
+            clr = 1'b1; //전역 초기화
+            #10;
+            clr = 1'b0;
+          end
+        
+        //==========================================================
+        // Golden Model (C_ref) 
+        //==========================================================
+          int unsigned C_ref [0:ROWS-1][0:COLS-1];
+        
+          //automatic task란? 
+          //호출될 때마다 task 내부 변수들이 각 호출마다 task 내부 변수들이
+          //각 호출마다 독립적으로 생성되어 지역변수가 공유되지 않는다는 장점을 가지고 있다.
+        
+          task automatic calc_golden_C_ref();
+            for (int r=0; r<ROWS; r++) begin
+              for (int c=0; c<COLS; c++) begin
+                int unsigned acc = 0;
+                for (int k=0; k<K_DIM; k++) begin
+                  acc += (sa.A[r][k] * sa.B[k][c]);
+                end
+                C_ref[r][c] = acc;
+                end
+              end
+          endtask
+
+
+
+
 
 
 
