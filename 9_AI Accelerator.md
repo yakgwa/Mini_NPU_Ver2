@@ -647,8 +647,8 @@ Timing Diagram 분석
 <div align="left">
 
 
-    - 기존 단일 PE에서는 random input이 선언된 이후, mul 출력이 조합 논리 특성상 즉시 정상적인 값으로 계산된다. 다만, 본 구조에서는 입력이 직접 PE로 들어가지 않고 입력 파이프라인을 거치기 때문에, 실제 mul 값은 입력 파이프 레지스터가 갱신되는 rising edge 이후에 관측된다. 같은 이유로 acc_sum은 조합 결과인 mul을 입력으로 받아 그 다음 rising edge에서 갱신되는 순차 동작을 보인다. 또한 pe_mul, pe_acc_sum은 packed array로 묶여 있어 파형 상 e61905b0 …와 같이 하나로 관측되며, golden model에서는 unpacked array 형태로 각 PE의 결과가 개별적으로 비교되었다. 최종적으로는 이러한 전 과정에 대해 DUT의 출력이 golden model과 사이클 단위로 완전히 동일함을 확인하였다.
-    - 1 cycle, en = 1 상태로 첫 번째 @(posedge clk)가 들어올 경우, 입력 파이프가 갱신되고 해당 입력에 대한 mul 결과가 rising edge 직후 정상적으로 반영된다.
-    - 2 cycle, en = 0 상태로 두 번째 @(posedge clk)가 들어올 경우, 이전 사이클에서 계산된 mul 값은 acc_sum에 반영되지 않고 유지되며, 동시에 다음 input에 대한 새mul 값은 정상적으로 계산되어 출력되는 것을 확인했다.
-    - 3 cycle, 다시 en = 1 상태로 세 번째 @(posedge clk)가 들어올 경우, 이전 사이클의 mul 결과가 acc_sum에 정상적으로 누적되고, 동시에 다음 input에 대한 mul 값 역시 정상적으로 반영된다.
-    - 4 cycle에서는 1×4 systolic array 구조이므로 최초 in_data가 4클록 지연 이후에 out_data로 출력되어야 하는데, 타이밍 상 최초 랜덤 입력값이었던 e7이 정확히 out_data에서 관측되어 파이프라인 레이턴시 또한 정상적으로 동작함을 확인하였다.
+👉 기존 단일 PE에서는 random input이 선언된 이후, mul 출력이 조합 논리 특성상 즉시 정상적인 값으로 계산된다. 다만, 본 구조에서는 입력이 직접 PE로 들어가지 않고 입력 파이프라인을 거치기 때문에, 실제 mul 값은 입력 파이프 레지스터가 갱신되는 rising edge 이후에 관측된다. 같은 이유로 acc_sum은 조합 결과인 mul을 입력으로 받아 그 다음 rising edge에서 갱신되는 순차 동작을 보인다. 또한 pe_mul, pe_acc_sum은 packed array로 묶여 있어 파형 상 e61905b0 …와 같이 하나로 관측되며, golden model에서는 unpacked array 형태로 각 PE의 결과가 개별적으로 비교되었다. 최종적으로는 이러한 전 과정에 대해 DUT의 출력이 golden model과 사이클 단위로 완전히 동일함을 확인하였다.
+👉 1 cycle, en = 1 상태로 첫 번째 @(posedge clk)가 들어올 경우, 입력 파이프가 갱신되고 해당 입력에 대한 mul 결과가 rising edge 직후 정상적으로 반영된다.
+👉 2 cycle, en = 0 상태로 두 번째 @(posedge clk)가 들어올 경우, 이전 사이클에서 계산된 mul 값은 acc_sum에 반영되지 않고 유지되며, 동시에 다음 input에 대한 새mul 값은 정상적으로 계산되어 출력되는 것을 확인했다.
+👉 3 cycle, 다시 en = 1 상태로 세 번째 @(posedge clk)가 들어올 경우, 이전 사이클의 mul 결과가 acc_sum에 정상적으로 누적되고, 동시에 다음 input에 대한 mul 값 역시 정상적으로 반영된다.
+👉 4 cycle에서는 1×4 systolic array 구조이므로 최초 in_data가 4클록 지연 이후에 out_data로 출력되어야 하는데, 타이밍 상 최초 랜덤 입력값이었던 e7이 정확히 out_data에서 관측되어 파이프라인 레이턴시 또한 정상적으로 동작함을 확인하였다.
