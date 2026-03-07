@@ -516,7 +516,7 @@
                   //전체 시뮬레이션 동안의 cycle 카운트
 
      - Step 5) Main (parameter + 변수 설정)
-     - 
+       
                    initial begin
                     @(posedge rst_n);
                     @(posedge clk);
@@ -634,7 +634,8 @@
                   end
                 endmodule
 
-
+     - Step 5) Main (메인 initial 시작)
+       - (1) Randomize → (2) Testcase 시작마다 DUT 누산 상태를 강제 초기화 → (3) Golden Model 정답 계산 → (4) enable 신호 적용 → (5) Skew Injection → (6) Flush → (7) Result Check → (8) Coverage 목표 도달 시 조기 종료
 
 
 
