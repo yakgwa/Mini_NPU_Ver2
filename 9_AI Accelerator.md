@@ -40,5 +40,5 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
             end
         endmodule
 
- - mac_pe는 Systolic Array의 가장 작은 MAC 수행 최소 연산 단위인 PE 역할을 한다. 입력 a, b를 곱해(mul) 필요할 때만 누적(acc_sum <= acc_sum + mul)한다.
- - PE는 의도적으로 mul(comb logic)과 acc_sum(seq logic)을 분리하여, 입력이 바뀌면 즉시 mul을 진행하고, acc_sum은 clock edge에서만 상태가 갱신되는 register이다. 이때 input을 모두 unsigned로 두었는데, 실제 fixed-point까지 진행하게 되면 signed로 두어 연산을 처리해야 한다.
+    - mac_pe는 Systolic Array의 가장 작은 MAC 수행 최소 연산 단위인 PE 역할을 한다. 입력 a, b를 곱해(mul) 필요할 때만 누적(acc_sum <= acc_sum + mul)한다.
+    - PE는 의도적으로 mul(comb logic)과 acc_sum(seq logic)을 분리하여, 입력이 바뀌면 즉시 mul을 진행하고, acc_sum은 clock edge에서만 상태가 갱신되는 register이다. 이때 input을 모두 unsigned로 두었는데, 실제 fixed-point까지 진행하게 되면 signed로 두어 연산을 처리해야 한다.
