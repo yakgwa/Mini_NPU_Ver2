@@ -397,53 +397,32 @@
 			endgenerate
 		endmodule
     
-1. 파라미터 / 입/출력 구조
+- 1️⃣ 파라미터 / 입/출력 구조
 
-parameter
+		parameter
+		     layerNo=0,                          //몇 번째 레이어인가?
+		     neuronNo=0,                      //해당 레이어에서 몇 번째 뉴런인가?
+		     numWeight=784,               //이 뉴런이 곱해야 하는 입력 개수
+		     dataWidth=16, sigmoidSize=5, weightIntWidth=1, actType="relu", biasFile="", weightFile=""​
+		
+		    input           clk,
+		    input           rst,
+		    input [dataWidth-1:0]    myinput,              //입력 데이터 스트림
+		    input           myinputValid,                         //유효 신호
+		    input           weightValid,                           
+		    input           biasValid,
+		    input [31:0]    weightValue,
+		    input [31:0]    biasValue,
+		    input [31:0]    config_layer_num,             //모든 뉴런이 같은 weightValue/biasValue 버스 공유
+		    input [31:0]    config_neuron_num,         //axi 버스가 특정 뉴런을 선택하기 위해 사용하는 설정용
+		    output[dataWidth-1:0]    out,                    //주소 입력이며, weight/bias 로딩을 위한 HW 셀렉터 역할
+		    output reg      outvalid                              //config_layer/neuron_num input이 필요하다.
 
-     layerNo=0,                          //몇 번째 레이어인가?
+- 2️⃣ 주소폭/레지스터/와이어 선언
 
-     neuronNo=0,                      //해당 레이어에서 몇 번째 뉴런인가?
+		parameter addressWidth = $clog2(numWeight);
 
-     numWeight=784,               //이 뉴런이 곱해야 하는 입력 개수
-
-     dataWidth=16, sigmoidSize=5, weightIntWidth=1, actType="relu", biasFile="", weightFile=""
-
-​
-
-    input           clk,
-
-    input           rst,
-
-    input [dataWidth-1:0]    myinput,              //입력 데이터 스트림
-
-    input           myinputValid,                         //유효 신호
-
-    input           weightValid,                           
-
-    input           biasValid,
-
-    input [31:0]    weightValue,
-
-    input [31:0]    biasValue,
-
-    input [31:0]    config_layer_num,             //모든 뉴런이 같은 weightValue/biasValue 버스 공유
-
-    input [31:0]    config_neuron_num,         //axi 버스가 특정 뉴런을 선택하기 위해 사용하는 설정용
-
-    output[dataWidth-1:0]    out,                    //주소 입력이며, weight/bias 로딩을 위한 HW 셀렉터 역할
-
-    output reg      outvalid                              //config_layer/neuron_num input이 필요하다.
-
-​
-
-2. 주소폭/레지스터/와이어 선언
-
-parameter addressWidth = $clog2(numWeight);
-
-weight 메모리 주소에 필요한 비트 수를 계산해야 한다. 예컨대, numWeight=784라면, $clog2(784)=10으로, 784개의 weight를 넣기 위해 1024개의 entry에 대한 메모리 주소를 만든다.
-
-​
+	- weight 메모리 주소에 필요한 비트 수를 계산해야 한다. 예컨대, numWeight=784라면, $clog2(784)=10으로, 784개의 weight를 넣기 위해 1024개의 entry에 대한 메모리 주소를 만든다.
 
 3. weight 값을 메모리에 write하는 always 구문 중 일부
 
