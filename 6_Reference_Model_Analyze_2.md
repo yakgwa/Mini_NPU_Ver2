@@ -614,30 +614,30 @@
 
 	- 매 클록마다 일단 o_data_valid를 0으로 내려. 결과가 나올 때만 아래에서 1로 올려서 1 클록짜리 valid 펄스를 만들겠다는 구조.
 
-		    if(i_valid)                                                   //새로운 계산 시작
-		    begin
-		        maxValue <= i_data[inputWidth-1:0]; //하위 16비트 즉, 0번째 원소 값을 maxValue에 대입
-		        counter <= 1;                                        //1번째 원소 비교하기 위한 카운터
-		        inDataBuffer <= i_data;                       //입력 묶음을 내부에 저장(비교를 inDataBuffer로 함)
-		        o_data <= 0;                                         //argmax 인덱스 0으로 시작
-		    end​
-		
-		    else if(counter == numInput)                  //모든 원소 검사 완료 시
-		    begin
-		        counter <= 0;                                       //카운터를 idle 상태로 복귀
-		        o_data_valid <= 1'b1;                         //결과 유효를 1로
-		    end
-		
-		    else if(counter != 0)                                //검사가 진행 중일때
-		    begin
-		        counter <= counter + 1;                     //다음 인덱스 준비
-		        if(inDataBuffer[counter*inputWidth+:inputWidth] > maxValue)
-		        begin
-		            maxValue <= inDataBuffer[counter*inputWidth+:inputWidth];  //maxValue 업데이트
-		            o_data <= counter; //o_data를 현재 인덱스로 업데이트
-		        end
-		    end
-		end
+			    if(i_valid)                                                   //새로운 계산 시작
+			    begin
+			        maxValue <= i_data[inputWidth-1:0]; //하위 16비트 즉, 0번째 원소 값을 maxValue에 대입
+			        counter <= 1;                                        //1번째 원소 비교하기 위한 카운터
+			        inDataBuffer <= i_data;                       //입력 묶음을 내부에 저장(비교를 inDataBuffer로 함)
+			        o_data <= 0;                                         //argmax 인덱스 0으로 시작
+			    end​
+			
+			    else if(counter == numInput)                  //모든 원소 검사 완료 시
+			    begin
+			        counter <= 0;                                       //카운터를 idle 상태로 복귀
+			        o_data_valid <= 1'b1;                         //결과 유효를 1로
+			    end
+			
+			    else if(counter != 0)                                //검사가 진행 중일때
+			    begin
+			        counter <= counter + 1;                     //다음 인덱스 준비
+			        if(inDataBuffer[counter*inputWidth+:inputWidth] > maxValue)
+			        begin
+			            maxValue <= inDataBuffer[counter*inputWidth+:inputWidth];  //maxValue 업데이트
+			            o_data <= counter; //o_data를 현재 인덱스로 업데이트
+			        end
+			    end
+			end
 
 	- inDataBuffer[counter*inputWidth+:inputWidth] :
 	- counter=1 → [16 +: 16] = bits [31:16] = 1번 원소
