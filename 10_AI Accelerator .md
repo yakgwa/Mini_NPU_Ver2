@@ -792,9 +792,9 @@ Testcase 0th 손계산 추가 검증
   - assign은 "회로 결선(Wiring)", always는 "동작 기술(Behavior)"
   - assign (Continuous Assignment)
     - 의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
-  - 대상: wire 타입만 가능.
+    - 대상: wire 타입만 가능.
   - always (Procedural Assignment)
-  - 의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
-  - 대상: reg (혹은 logic) 타입만 가능.
+    - 의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
+    - 대상: reg (혹은 logic) 타입만 가능.
   - 두 방식 모두 Combinational Logic을 만들 수 있지만, assign은 수식이 간단할 때 (AND, OR, 삼항 연산자 등), always @(*)은 if-else, case 문 등 복잡한 로직이 필요할 때. (Latch 생성 주의 필요) 사용된다.
 
