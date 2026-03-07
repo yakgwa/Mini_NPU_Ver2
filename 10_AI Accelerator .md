@@ -637,6 +637,34 @@
      - Step 5) Main (메인 initial 시작)
        - (1) Randomize → (2) Testcase 시작마다 DUT 누산 상태를 강제 초기화 → (3) Golden Model 정답 계산 → (4) enable 신호 적용 → (5) Skew Injection → (6) Flush → (7) Result Check → (8) Coverage 목표 도달 시 조기 종료
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_30.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_31.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_32.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_33.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_34.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_35.png" width="400"/>
+
+Testcase 0th 손계산 추가 검증
+
+<div align="left">
+
+
+
 
 
 
