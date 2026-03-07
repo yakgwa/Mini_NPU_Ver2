@@ -497,142 +497,142 @@
 
        - negedge에서 clr=1로 하여 setup time을 확보하고, 그 동안 a_in_row, b_in_col을 모두 0으로 만든다. 즉, DUT의 레지스터들은 보통 posedge에서 샘플링하기 때문에, negedge에서 clr=1로 올려두면, 다음 posedge까지 반 주기가 생기고, 이를 통해 setup time 관점에서 더 안전하게 클록 edge 전에 안정화 시킬 수 있다.
 
-          localparam int  NUM_TESTS    = 1000; //최대 testcase 수
-          localparam int  INJ_CYCLES   = K_DIM + ROWS + COLS - 2; //skew 주입 횟수
-          //쉽게 말해, 행/열마다 PE에 최초로 주입되는 입력 값이 딜레이가 생기는 만큼,
-          //Systolic Array의 PE가 전부 계산될 때 까지 주입해야 하는 시간을 말한다.
-          localparam int  FLUSH_CYCLES = 5;
-          //Skew 주입 종료 후, 내부 pipe에 남아있는 데이터가 끝까지 전달되고
-          //acc_sum이 안정화되도록 0을 더 넣는 구간
-          //경험적으로 5정도로 설정
-          localparam real COV_TARGET   = 100.0;
-          //coverage 목표치, 100이 되면 조기 종료
-        
-          int err_cnt = 0;
-          //testcase 1개에서 발생한 에러 수
-          int err_cnt_total = 0;
-          //전체 누적된 에러 수
-          int cycles_checked = 0;
-          //전체 시뮬레이션 동안의 cycle 카운트
+                  localparam int  NUM_TESTS    = 1000; //최대 testcase 수
+                  localparam int  INJ_CYCLES   = K_DIM + ROWS + COLS - 2; //skew 주입 횟수
+                  //쉽게 말해, 행/열마다 PE에 최초로 주입되는 입력 값이 딜레이가 생기는 만큼,
+                  //Systolic Array의 PE가 전부 계산될 때 까지 주입해야 하는 시간을 말한다.
+                  localparam int  FLUSH_CYCLES = 5;
+                  //Skew 주입 종료 후, 내부 pipe에 남아있는 데이터가 끝까지 전달되고
+                  //acc_sum이 안정화되도록 0을 더 넣는 구간
+                  //경험적으로 5정도로 설정
+                  localparam real COV_TARGET   = 100.0;
+                  //coverage 목표치, 100이 되면 조기 종료
+                
+                  int err_cnt = 0;
+                  //testcase 1개에서 발생한 에러 수
+                  int err_cnt_total = 0;
+                  //전체 누적된 에러 수
+                  int cycles_checked = 0;
+                  //전체 시뮬레이션 동안의 cycle 카운트
 
      - Step 5) Main (parameter + 변수 설정)
      - 
-           initial begin
-            @(posedge rst_n);
-            @(posedge clk);
-        
-            $display("==================================================");
-            $display("[TB] systolic_array_2d Random Verification START");
-            $display("  ROWS=%0d, COLS=%0d, K_DIM=%0d, DATA_W=%0d, ACC_W=%0d",
-                     ROWS, COLS, K_DIM, DATA_W, ACC_W);
-            $display("  NUM_TESTS=%0d, INJ_CYCLES=%0d", NUM_TESTS, INJ_CYCLES);
-            $display("==================================================");
-        
-            for (int tc = 0; tc < NUM_TESTS; tc++) begin
-              // (1) 랜덤 생성
-              assert(sa.randomize());
-              cg.sample(); 
-             
-              // (2) testcase 시작마다 DUT 누산 상태를 강제 초기화
-              // 위에서 정의한 clr_pulse_1cycle 함수 driver 활용한다. 
-              clr_pulse_1cycle();
-              cycles_checked++; // driver에서 사이클 소모로 대략적인 사이클 체크 값 보정치 적용
-             
-              // (3) Golden Model 정답 계산 
-              // 위에서 정의한 calc_golden_C_ref로 정의된 golden model 함수를 활용한다.
-              calc_golden_C_ref();  
-        
-              // (4) enable 신호 적용
-              en  = sa.en;
-              cycles_checked++; 
-        
-              // (5) Skew Injection
-              // 위에서 정의한 drive_skew_cycle 함수 driver 활용한다.
-              for (int t=0; t<INJ_CYCLES; t++) begin
-                @(negedge clk); //negedge에서 입력 세팅하고 posedge에서 dut가 sampling
-                if (en) begin   //en=1이면 스케줄링에 맞춰 해당 t의 row/col 입력을 넣는다
-                    drive_skew_cycle(t);         
-                end else begin
-                  for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
-                  for (int c=0; c<COLS; c++) b_in_col[c] = '0;
-                end
-                @(posedge clk); //posedge에서 dut가 입력을 받아 레지스터 및 누산 업데이트
-                cycles_checked++;
-              end
-        
-              // (6) Flush
-              // 입력을 더 이상 넣지 않고 0만 주입한다.
-              // 내부 파이프라인에 남아있는 값들이 끝까지 흘러가며 결과가 완성되도록 사이클을 확보한다.
-              for (int f=0; f<FLUSH_CYCLES; f++) begin
-                @(negedge clk);
-                for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
-                for (int c=0; c<COLS; c++) b_in_col[c] = '0;
-                @(posedge clk);
-                cycles_checked++;
-              end
-        
-              // (7) Result Check
-              $display("--------------------------------------------------");
-              $display("[TB] TestCase %0d (en=%0d, clr=%0d) Checking...", tc, en, 0);
-        
-              if (en) begin
-                for (int r = 0; r < ROWS; r++) begin
-                  for (int c = 0; c < COLS; c++) begin
-                    if (pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W] !== C_ref[r][c]) begin
-                      err_cnt++;
-                      $display("ERROR C[%0d][%0d]: dut=%0d, ref=%0d, time=%0t",
-                               r, c,
-                               pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W],
-                               C_ref[r][c],
-                               $time);
+                   initial begin
+                    @(posedge rst_n);
+                    @(posedge clk);
+                
+                    $display("==================================================");
+                    $display("[TB] systolic_array_2d Random Verification START");
+                    $display("  ROWS=%0d, COLS=%0d, K_DIM=%0d, DATA_W=%0d, ACC_W=%0d",
+                             ROWS, COLS, K_DIM, DATA_W, ACC_W);
+                    $display("  NUM_TESTS=%0d, INJ_CYCLES=%0d", NUM_TESTS, INJ_CYCLES);
+                    $display("==================================================");
+                
+                    for (int tc = 0; tc < NUM_TESTS; tc++) begin
+                      // (1) 랜덤 생성
+                      assert(sa.randomize());
+                      cg.sample(); 
+                     
+                      // (2) testcase 시작마다 DUT 누산 상태를 강제 초기화
+                      // 위에서 정의한 clr_pulse_1cycle 함수 driver 활용한다. 
+                      clr_pulse_1cycle();
+                      cycles_checked++; // driver에서 사이클 소모로 대략적인 사이클 체크 값 보정치 적용
+                     
+                      // (3) Golden Model 정답 계산 
+                      // 위에서 정의한 calc_golden_C_ref로 정의된 golden model 함수를 활용한다.
+                      calc_golden_C_ref();  
+                
+                      // (4) enable 신호 적용
+                      en  = sa.en;
+                      cycles_checked++; 
+                
+                      // (5) Skew Injection
+                      // 위에서 정의한 drive_skew_cycle 함수 driver 활용한다.
+                      for (int t=0; t<INJ_CYCLES; t++) begin
+                        @(negedge clk); //negedge에서 입력 세팅하고 posedge에서 dut가 sampling
+                        if (en) begin   //en=1이면 스케줄링에 맞춰 해당 t의 row/col 입력을 넣는다
+                            drive_skew_cycle(t);         
+                        end else begin
+                          for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
+                          for (int c=0; c<COLS; c++) b_in_col[c] = '0;
+                        end
+                        @(posedge clk); //posedge에서 dut가 입력을 받아 레지스터 및 누산 업데이트
+                        cycles_checked++;
+                      end
+                
+                      // (6) Flush
+                      // 입력을 더 이상 넣지 않고 0만 주입한다.
+                      // 내부 파이프라인에 남아있는 값들이 끝까지 흘러가며 결과가 완성되도록 사이클을 확보한다.
+                      for (int f=0; f<FLUSH_CYCLES; f++) begin
+                        @(negedge clk);
+                        for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
+                        for (int c=0; c<COLS; c++) b_in_col[c] = '0;
+                        @(posedge clk);
+                        cycles_checked++;
+                      end
+                
+                      // (7) Result Check
+                      $display("--------------------------------------------------");
+                      $display("[TB] TestCase %0d (en=%0d, clr=%0d) Checking...", tc, en, 0);
+                
+                      if (en) begin
+                        for (int r = 0; r < ROWS; r++) begin
+                          for (int c = 0; c < COLS; c++) begin
+                            if (pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W] !== C_ref[r][c]) begin
+                              err_cnt++;
+                              $display("ERROR C[%0d][%0d]: dut=%0d, ref=%0d, time=%0t",
+                                       r, c,
+                                       pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W],
+                                       C_ref[r][c],
+                                       $time);
+                            end
+                            else begin
+                              $display("PASS  C[%0d][%0d]: dut=%0d, ref=%0d, time=%0t",
+                                       r, c,
+                                       pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W],
+                                       C_ref[r][c],
+                                       $time);
+                            end
+                          end
+                        end
+                
+                        if (err_cnt == 0) $display("[TB] RESULT: PASS");
+                        else               $display("[TB] RESULT: FAIL (err=%0d)", err_cnt);
+                
+                        err_cnt_total += err_cnt;
+                      end
+                      else begin
+                        $display("[TB] en=0 -> skip checking this testcase");
+                      end
+                
+                      // (8) Coverage 목표 도달 시 조기 종료
+                      if (cg.get_inst_coverage() >= COV_TARGET) begin
+                        $display("[TB] Coverage reached %0.2f%% at testcase=%0d, time=%0t",
+                                 cg.get_inst_coverage(), tc, $time);
+                        break;
+                      end
                     end
-                    else begin
-                      $display("PASS  C[%0d][%0d]: dut=%0d, ref=%0d, time=%0t",
-                               r, c,
-                               pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W],
-                               C_ref[r][c],
-                               $time);
-                    end
+                
+                    //========================================================
+                    // Summary
+                    //========================================================
+                    $display("==================================================");
+                    $display("[TB] Simulation Summary");
+                    $display("  Cycles checked : %0d", cycles_checked);
+                    $display("  Total errors   : %0d", err_cnt_total);
+                    if (err_cnt_total == 0) $display("  RESULT         : PASS");
+                    else                    $display("  RESULT         : FAIL");
+                    $display("--------------------------------------------------");
+                    $display("[TB] Functional Coverage");
+                    $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
+                    $display("  en         : %0.2f %%", cg.cp_en.get_inst_coverage());
+                    $display("  clr        : %0.2f %%", cg.cp_clr.get_inst_coverage());
+                    $display("  A[0][0]    : %0.2f %%", cg.cp_A00.get_inst_coverage());
+                    $display("  B[0][0]    : %0.2f %%", cg.cp_B00.get_inst_coverage());
+                    $display("==================================================");
+                    $finish;
                   end
-                end
-        
-                if (err_cnt == 0) $display("[TB] RESULT: PASS");
-                else               $display("[TB] RESULT: FAIL (err=%0d)", err_cnt);
-        
-                err_cnt_total += err_cnt;
-              end
-              else begin
-                $display("[TB] en=0 -> skip checking this testcase");
-              end
-        
-              // (8) Coverage 목표 도달 시 조기 종료
-              if (cg.get_inst_coverage() >= COV_TARGET) begin
-                $display("[TB] Coverage reached %0.2f%% at testcase=%0d, time=%0t",
-                         cg.get_inst_coverage(), tc, $time);
-                break;
-              end
-            end
-        
-            //========================================================
-            // Summary
-            //========================================================
-            $display("==================================================");
-            $display("[TB] Simulation Summary");
-            $display("  Cycles checked : %0d", cycles_checked);
-            $display("  Total errors   : %0d", err_cnt_total);
-            if (err_cnt_total == 0) $display("  RESULT         : PASS");
-            else                    $display("  RESULT         : FAIL");
-            $display("--------------------------------------------------");
-            $display("[TB] Functional Coverage");
-            $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
-            $display("  en         : %0.2f %%", cg.cp_en.get_inst_coverage());
-            $display("  clr        : %0.2f %%", cg.cp_clr.get_inst_coverage());
-            $display("  A[0][0]    : %0.2f %%", cg.cp_A00.get_inst_coverage());
-            $display("  B[0][0]    : %0.2f %%", cg.cp_B00.get_inst_coverage());
-            $display("==================================================");
-            $finish;
-          end
-        endmodule
+                endmodule
 
 
 
