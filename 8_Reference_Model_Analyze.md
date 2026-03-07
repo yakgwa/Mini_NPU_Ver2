@@ -50,8 +50,9 @@
     <td>MAC 수</td>   
   </tr>
   <tr>
-    <td><strong>Peak Memory Usage</strong></td>
-    <td><strong>4882MB</strong></td>
+    <td><strong>Layer1</strong></td>
+    <td><strong>Layer2</strong></td>
+    <td><strong>Layer3</strong></td>    
   </tr>
   <tr>
     <td colspan="2" style="text-align: center;"><strong>100개 Data Sample에 대한 Accuracy : 99%</strong></td>
