@@ -780,39 +780,21 @@ Testcase 0th 손계산 추가 검증
   - LHS (쓰기): 클럭이 뜬 직후(Update)에 값이 갱신됨.
   - 결과: 위 코드는 a와 b의 값이 서로 Swap 됨. (RHS가 동시에 읽혔기 때문)
 
-​
+- 4️⃣ Non-blocking (<=) 동작 메커니즘
+  - 모두 읽고(Sample), 나중에 한꺼번에 쓴다(Update)
+  - 하드웨어 시뮬레이터(Event Queue)는 always @(posedge clk)를 다음과 같이 처리한다.
+  - 1. Event: posedge clk 발생 (Trigger).
+  - 2. Evaluation (RHS): 블록 내 모든 수식의 RHS 값(현재 값)을 캡처.
+  - 3. Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
+  - 👉 non-blocking은 Flip-Flop(Shift Register) 모델링과 완벽히 대응
 
-4. Non-blocking (<=) 동작 메커니즘
-
-모두 읽고(Sample), 나중에 한꺼번에 쓴다(Update)
-
-하드웨어 시뮬레이터(Event Queue)는 always @(posedge clk)를 다음과 같이 처리한다.
-
-1. Event: posedge clk 발생 (Trigger).
-
-2. Evaluation (RHS): 블록 내 모든 수식의 RHS 값(현재 값)을 캡처.
-
-3. Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
-
-👉 non-blocking은 Flip-Flop(Shift Register) 모델링과 완벽히 대응
-
-​
-
-5. assign vs. always
-
-assign은 "회로 결선(Wiring)", always는 "동작 기술(Behavior)"
-
-assign (Continuous Assignment)
-
-의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
-
-대상: wire 타입만 가능.
-
-always (Procedural Assignment)
-
-의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
-
-대상: reg (혹은 logic) 타입만 가능.
-
-두 방식 모두 Combinational Logic을 만들 수 있지만, assign은 수식이 간단할 때 (AND, OR, 삼항 연산자 등), always @(*)은 if-else, case 문 등 복잡한 로직이 필요할 때. (Latch 생성 주의 필요) 사용된다.
+​- 5️⃣  assign vs. always
+  - assign은 "회로 결선(Wiring)", always는 "동작 기술(Behavior)"
+  - assign (Continuous Assignment)
+  - 의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
+  - 대상: wire 타입만 가능.
+  - always (Procedural Assignment)
+  - 의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
+  - 대상: reg (혹은 logic) 타입만 가능.
+  - 두 방식 모두 Combinational Logic을 만들 수 있지만, assign은 수식이 간단할 때 (AND, OR, 삼항 연산자 등), always @(*)은 if-else, case 문 등 복잡한 로직이 필요할 때. (Latch 생성 주의 필요) 사용된다.
 
