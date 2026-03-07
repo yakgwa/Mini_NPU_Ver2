@@ -332,6 +332,45 @@
                 int unsigned C_ref [0:ROWS-1][0:COLS-1];
 
      - 이후, C_ref = A X B 행렬곱을 계산하기 위해, acc_local를 (r,c)마다 0으로 초기화하여, constraint random으로 생성한 sa.A, sa.B를 acc_local에 담아서 정답인 C_ref를 계산하도록 한다.
+ 
+
+          //==========================================================
+          // Step 4) Functional Coverage
+          //==========================================================
+          covergroup cg_sa_2d;
+            cp_en  : coverpoint sa.en  { bins b0={0}; bins b1={1}; }
+            cp_clr : coverpoint sa.clr { bins b0={0}; bins b1={1}; }
+        
+            cp_A00 : coverpoint sa.A[0][0] {
+              bins zero = {0};
+              bins one  = {1};
+              bins max  = {(2**DATA_W)-1};
+              bins mid = {[2:(2**DATA_W)-2]};
+            }
+        
+            cp_B00 : coverpoint sa.B[0][0] {
+              bins zero = {0};
+              bins one  = {1};
+              bins max  = {(2**DATA_W)-1};
+              bins mid = {[2:(2**DATA_W)-2]};
+            }
+          endgroup
+        
+          cg_sa_2d cg = new;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
