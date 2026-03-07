@@ -731,9 +731,165 @@ Testcase 0th 손계산 추가 검증
 
      - 특히 clr=1 테스트에서 DUT 출력은 정상적으로 0이 나오는데, Golden Model의 reference 값은 0이 아닌 상태로 남아 있는 현상을 통해, 이는 DUT 문제가 아니라 Testbench 체크 조건과 초기화 시퀀스가 잘못되었음을 인지하게 되었다.
 
-✅ 개선방안 : testcase 경계 관리 방식을 전면적으로 수정하였다. 모든 testcase 시작 시점마다 반드시 clr=1을 1-cycle 인가하여 acc_sum을 명확히 초기화한 뒤, 바로 clr=0으로 내리고 그 이후에만 Skew Injection을 시작하도록 규칙을 고정하였다. 또한 이 동작을 반복적으로 정확하게 수행하기 위해, testcase 경계에서 사용하는 acc_sum 초기화용 clr 1-cycle 펄스를 task automatic 형태의 드라이버로 정의하여 재사용 가능하도록 구성하였다. 이 개선을 통해 Golden Model과 DUT 간 상태(state)가 항상 동일한 조건에서 비교되도록 보장할 수 있었으며, 이후 동일한 시나리오에서 누산 관련 mismatch는 완전히 제거할 수 있었다.
+     - ✅ 개선방안 : testcase 경계 관리 방식을 전면적으로 수정하였다. 모든 testcase 시작 시점마다 반드시 clr=1을 1-cycle 인가하여 acc_sum을 명확히 초기화한 뒤, 바로 clr=0으로 내리고 그 이후에만 Skew Injection을 시작하도록 규칙을 고정하였다. 또한 이 동작을 반복적으로 정확하게 수행하기 위해, testcase 경계에서 사용하는 acc_sum 초기화용 clr 1-cycle 펄스를 task automatic 형태의 드라이버로 정의하여 재사용 가능하도록 구성하였다. 이 개선을 통해 Golden Model과 DUT 간 상태(state)가 항상 동일한 조건에서 비교되도록 보장할 수 있었으며, 이후 동일한 시나리오에서 누산 관련 mismatch는 완전히 제거할 수 있었다.
 
+### Hardware 관점에서 Verilog 문법 재정리
 
+- 1️⃣ Packed vs. Unpacked Array
+ - Packed는 하나의 덩어리(Bus), Unpacked는 여러 개의 낱개(Collection)
 
+구분
 
+문법 예시
+
+메모리 구조
+
+하드웨어 매핑
+
+Packed
+
+logic [7:0] a;
+
+연속된 비트
+
+단일 버스 / 레지스터
+
+Unpacked
+
+logic a [7:0];
+
+독립된 워드
+
+독립 신호 / 배열
+
+Mixed
+
+logic [7:0] a [3:0];
+
+비트의 묶음
+
+8비트 슬롯이 4개 
+
+Packed (logic [7:0] data)
+
+연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
+
+용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
+
+비유: 8차선 고속도로 (한 번에 데이터가 흐름).
+
+Unpacked (logic [7:0] data [0:3])
+
+연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
+
+용도: Systolic Array의 PE 집합, FIFO 버퍼, 메모리 뱅크.
+
+비유: 4개의 독립된 1차선 도로 (각자 따로 움직임).
+
+​
+
+2. Wire vs. Reg
+
+wire는 연결선(Connection), reg는 값을 담는 그릇(Container)
+
+❌ : wire = 조합 회로, reg = 순차 회로(FF)
+
+✅ : wire: 물리적인 전선. 드라이버(Driver)가 끊임없이 값을 밀어줘야 함.
+
+        reg: 절차적(Procedural) 블록 안에서 값을 할당받는 변수.
+
+구분
+
+키워드
+
+동작 방식
+
+하드웨어 매핑
+
+Wire
+
+assign
+
+Continuous Drive
+
+​
+
+(입력 변경 시, 즉시 반영)
+
+물리적 배선 (Net)
+
+​
+
+게이트 출력선
+
+Reg
+
+always
+
+Store & Hold
+
+​
+
+(이벤트 발생 시에만 갱신)
+
+Flip-Flop, Latch
+
+​
+
+(단, 조합논리 기술 시엔 wire처럼 동작)
+
+3. LHS vs. RHS (Timing & Pipeline)
+
+Clock Edge 시점에서 RHS는 현재(Current) 값, LHS는 미래(Next) 값
+
+RHS (Right-Hand Side): = 또는 <= 오른쪽에 있는 식. (Data Source)
+
+LHS (Left-Hand Side): 값을 할당받는 변수. (Data Destination)
+
+//Timing 관점에서의 해석
+always @(posedge clk) begin
+    a <= b;  // (1)
+    b <= a;  // (2)
+end
+RHS (읽기): 클럭이 뜨는 순간(posedge)의 이전 값 읽음.
+
+LHS (쓰기): 클럭이 뜬 직후(Update)에 값이 갱신됨.
+
+결과: 위 코드는 a와 b의 값이 서로 Swap 됨. (RHS가 동시에 읽혔기 때문)
+
+​
+
+4. Non-blocking (<=) 동작 메커니즘
+
+모두 읽고(Sample), 나중에 한꺼번에 쓴다(Update)
+
+하드웨어 시뮬레이터(Event Queue)는 always @(posedge clk)를 다음과 같이 처리한다.
+
+1. Event: posedge clk 발생 (Trigger).
+
+2. Evaluation (RHS): 블록 내 모든 수식의 RHS 값(현재 값)을 캡처.
+
+3. Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
+
+👉 non-blocking은 Flip-Flop(Shift Register) 모델링과 완벽히 대응
+
+​
+
+5. assign vs. always
+
+assign은 "회로 결선(Wiring)", always는 "동작 기술(Behavior)"
+
+assign (Continuous Assignment)
+
+의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
+
+대상: wire 타입만 가능.
+
+always (Procedural Assignment)
+
+의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
+
+대상: reg (혹은 logic) 타입만 가능.
+
+두 방식 모두 Combinational Logic을 만들 수 있지만, assign은 수식이 간단할 때 (AND, OR, 삼항 연산자 등), always @(*)은 if-else, case 문 등 복잡한 로직이 필요할 때. (Latch 생성 주의 필요) 사용된다.
 
