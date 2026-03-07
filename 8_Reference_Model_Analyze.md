@@ -135,7 +135,7 @@
 
 <br>
 
-  🚀 1D (1-dimension) 1×2 PE Chain
+🚀 1D (1-dimension) 1×2 PE Chain
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_11.png" width="400"/>
 
@@ -157,35 +157,26 @@ Cycle 1
 
 ....
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_13.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_14.png" width="400"/>
 
 Cycle 784
 
 <div align="left">
 
 - 그림을 통해 알 수 있듯이 Layer1의 출력은 총 30개인데, 1x2 Chain은 그 중 2개의 출력만 만든다. 따라서 Layer1을 모두 수행하려면 이를 15번 반복해야 한다. Layer2, 3도 같은 방식으로 진행한다.
-
 - 대략적인 1 sample latency: 784×15+30×10+20×5=12,160 cycles
-
 - 기존 ZyNet은 (아주 대략적으로) 784+30+20=834 cycles 수준으로 1 sample이 나온다고 보면, 면적은 어마어마하게 줄일 수 있으나, 1 sample latency는 현저히 느려진다.
 
-​
+🚀 1D (1-dimension) 1×4 PE Chain
 
-1D (1-dimension) 1×4 PE Chain
+- PE를 4개로 늘리면 병렬도가 증가해 반복 횟수가 줄어든다.
+- 대략적인 1 sample latency: 784×8+30×5+20×3=6,482 cycles
+- 기존 ZyNet(834 cycles) 대비, 면적은 줄일 수 있으나 여전히 1 sample latency는 느리다.
 
-PE를 4개로 늘리면 병렬도가 증가해 반복 횟수가 줄어든다.
+🚀 2D (2-dimension) 4×4 Systolic Array (Batch=4)
 
-대략적인 1 sample latency: 784×8+30×5+20×3=6,482 cycles
-
-기존 ZyNet(834 cycles) 대비, 면적은 줄일 수 있으나 여전히 1 sample latency는 느리다.
-
-​
-
-2D (2-dimension) 4×4 Systolic Array (Batch=4)
-
-따라서 최초 설계는 다음과 같이 4x4 Systolic Array 수준으로 설계하고자 한다. 물론 정확한 수치적인 측면은 컨트롤/파이프라인/메모리 구조에 따라 달라질 수 있으나, 설계 방향성을 잡기 위한 1차 모델로 제시한다. ‘최소한의 복잡도로 OS dataflow의 Systolic Array의 모든 핵심 개념을 드러내는 교육·검증용 구성’이다. 레이어1 병목을 이기기 위한 최적 설계라기보다는, 기존 ZyNet과 구조적 차이를 비교하기 위한 anchor로 최초 설계를 진행하고자 한다.
-
-여기서 기존 1D PE Chain과의 차이점은 한 샘플에 대한 레이턴시가 느려져도, 여러 샘플을 동시에 넣어 throughput에서 이득을 보자는 관점으로 Batch 4개를 한 번에 처리하고자 한다. 대략적인 Layer1 사이클 흐름은 다음과 같다.
+- 따라서 최초 설계는 다음과 같이 4x4 Systolic Array 수준으로 설계하고자 한다. 물론 정확한 수치적인 측면은 컨트롤/파이프라인/메모리 구조에 따라 달라질 수 있으나, 설계 방향성을 잡기 위한 1차 모델로 제시한다. ‘최소한의 복잡도로 OS dataflow의 Systolic Array의 모든 핵심 개념을 드러내는 교육·검증용 구성’이다. 레이어1 병목을 이기기 위한 최적 설계라기보다는, 기존 ZyNet과 구조적 차이를 비교하기 위한 anchor로 최초 설계를 진행하고자 한다.
+- 여기서 기존 1D PE Chain과의 차이점은 한 샘플에 대한 레이턴시가 느려져도, 여러 샘플을 동시에 넣어 throughput에서 이득을 보자는 관점으로 Batch 4개를 한 번에 처리하고자 한다. 대략적인 Layer1 사이클 흐름은 다음과 같다.
 
  
 
