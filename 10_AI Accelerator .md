@@ -180,6 +180,41 @@
               end
             endgenerate
 
+     - 여기서 Systolic Array의 각 PE를 interconncect하기 위한 연결망을 위에서 선언한 a_data와 맵핑한다. 여기서 핵심은 a_data는 좌→우로 이동하므로 COLS+1, b_data는 상→하로 이동하기 때문에 ROWS+1로 물리적인 파이프 역할을 하는 신호선을 고려한다.
+
+            generate
+              for (r=0; r<ROWS; r=r+1) begin : GEN_A_EDGE
+                assign a_conn[r][0] = a_data[r];
+              end
+              for (c=0; c<COLS; c=c+1) begin : GEN_B_EDGE
+                assign b_conn[0][c] = b_data[c];
+              end
+            endgenerate
+
+     - 이렇게 맵핑된 Systolic Array는 다음과 같이, 요약할 수 있다.
+
+            // 2D Systolic Dataflow (A: left→right, B: top→bottom)
+            //                          b_data[0] b_data[1]b_data[2]b_data[3]
+            //                               ↓      ↓     ↓      ↓
+            //                     b_conn[0][0] b_conn[0][1] b_conn[0][2] b_conn[0][3]
+            //                               ↓     ↓      ↓      ↓
+            // a_data[0] → a_conn[0][0] →  PE  →  PE  →  PE  →  PE
+            //                               ↓     ↓      ↓      ↓
+            // a_data[1] → a_conn[1][0] →  PE  →  PE  →  PE  →  PE
+            //                               ↓     ↓      ↓      ↓
+            // a_data[2] → a_conn[2][0] →  PE  →  PE  →  PE  →  PE
+            //                               ↓     ↓      ↓      ↓
+            // a_data[3] → a_conn[3][0] →  PE  →  PE  →  PE  →  PE
+
+
+
+
+
+
+
+
+
+
 
 
 
