@@ -467,7 +467,7 @@
 		  mul <= $signed(myinputd) * $signed(w_out);
 		end
 
-	👉myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
+	👉 myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
 
 - 7️⃣ sum + saturation + bias add
 
@@ -499,49 +499,29 @@
 	- else if(bias[2*dataWidth-1] & sum[2*dataWidth-1] &  !BiasAdd[2*dataWidth-1]) : 이는 반대로 bias와 sum 모두 음수인데, 이 두 값 모두 음수여서 BiasAdd가 양수로 overflow된 상황이므로, 이때는 sum을 MIN로 saturation시킨다.
 	- else : 만약 위와 같은 두 상황이 모두 발생하지 않은, overflow가 발생하지 않은 상황이라면, 정상적으로 더한 값을 sum에 사용한다.
 
-​
+​이어서 그 다음 구문을 확인해보자.
 
-이어서 그 다음 구문을 확인해보자.
+		  else if(mux_valid)
+		  begin
+		    ...
+		    sum <= comboAdd;
+		  end
+		end
 
-  else if(mux_valid)
+	- 이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
 
-  begin
+- 8️⃣ 입력/Valid Pipeline 정렬 + outvalid 생성
 
-    ...
-
-    sum <= comboAdd;
-
-  end
-
-end
-
-이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
-
-​
-
-8. 입력/Valid Pipeline 정렬 + outvalid 생성
-
-    always @(posedge clk)
-
-    begin
-
-        myinputd <= myinput;  //입력 1클록 지연
-
-        weight_valid <= myinputValid; //myinputValid 1클록 지연
-
-        mult_valid <= weight_valid; //weight_valid 1클록 더 지연
-
-        sigValid <= ((r_addr == numWeight) & muxValid_f) ? 1'b1 : 1'b0; //마지막 입력 처리 완료 시 1
-
-        outvalid <= sigValid; //sigValid를 바로 다음 줄에서 outvalid로 보냄
-
-        muxValid_d <= mux_valid; //일반 mul + sum에 대한 것
-
-        muxValid_f <= !mux_valid & muxValid_d; //마지막 누산이 끝나는 순간에 대한 것
-
-    end
-
-​
+		    always @(posedge clk)
+		    begin
+		        myinputd <= myinput;  //입력 1클록 지연
+		        weight_valid <= myinputValid; //myinputValid 1클록 지연
+		        mult_valid <= weight_valid; //weight_valid 1클록 더 지연
+		        sigValid <= ((r_addr == numWeight) & muxValid_f) ? 1'b1 : 1'b0; //마지막 입력 처리 완료 시 1
+		        outvalid <= sigValid; //sigValid를 바로 다음 줄에서 outvalid로 보냄
+		        muxValid_d <= mux_valid; //일반 mul + sum에 대한 것
+		        muxValid_f <= !mux_valid & muxValid_d; //마지막 누산이 끝나는 순간에 대한 것
+		    end
 
 *입력은 왜 1 클록 지연이 필요한가?
 
