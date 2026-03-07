@@ -214,7 +214,7 @@ Cycle 5
 
 <div align="left">
 
-....
+<div align="center">....
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_21.png" width="400"/>
 
