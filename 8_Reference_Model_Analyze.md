@@ -20,7 +20,7 @@
     - 직렬화 FSM + Layer2 출력 valid : 1 + 20 + 2 + 2 cycle
 
   - maxFinder Cycle
-   - 10cycle
+     - 10cycle
 
 👉 이론적인 사이클 분석 결과, 단순 연산 흐름만 고려할 경우 입력 스트림이 시작된 시점으로부터 약 858 cycle 이후에 최종 결과(out_valid)가 출력된다.
 
