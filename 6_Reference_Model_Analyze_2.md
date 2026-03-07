@@ -427,15 +427,11 @@
 - 3️⃣ weight 값을 메모리에 write하는 always 구문 중 일부
 
         else if(weightValid & (config_layer_num==layerNo) & (config_neuron_num==neuronNo))
-
         begin
-
             w_in <= weightValue;
 
             w_addr <= w_addr + 1;
-
             wen <= 1;
-
         end
 
 	- weightValid=1이고, 외부가 지정한 config_layer/neuron_num이 해당 뉴런의 layerNo/neuronNo와 같으면, w_in에 weightValue를 넣고, w_addr 증가, wen=1로 메모리에 write
@@ -470,6 +466,7 @@
 		begin
 		  mul <= $signed(myinputd) * $signed(w_out);
 		end
+
 
 	- myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
 
