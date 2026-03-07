@@ -83,6 +83,99 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
       - clr dist {1 := 5, 0 := 95}; : 5% 가량 clr=1이 생성되도록 constraint
       - en  dist {1 := 50, 0 := 50}; : 50% 가량 en=1이 생성되도록 constraint
 
+                    //==========================================================
+                    // Step 3) Top Module Instantiation
+                    //==========================================================
+                     mac_pe #(.DATA_W(DATA_W), .ACC_W(ACC_W)) dut (
+                        .clk     (clk),
+                        .rst_n   (rst_n),
+                        .clr     (clr),
+                        .en      (en),
+                        .a       (a),
+                        .b       (b),
+                        .mul     (mul),
+                        .acc_sum (acc_sum)
+                     );
+                //========================================================
+                // Clock / Reset
+                //========================================================
+                    initial begin
+                        clk = 1'b0;
+                        forever #5 clk=~clk; //100MHz
+                    end
+                    
+                    initial begin
+                        rst_n = 1'b0;
+                        clr = 1'b0;
+                        en = 1'b0;
+                        a = '0;
+                        b = '0;
+                        
+                        #30;
+                        rst_n = 1'b1; //after 30ns -> rst_n=1, start
+                     end
+                //==========================================================
+                // Golden Model & Checker (Watchpoint)
+                //==========================================================
+                    logic [ACC_W-1:0] ref_mul;
+                    logic [ACC_W-1:0] ref_sum;
+                
+                    int cycles_checked;
+                    int err_acc_cnt;
+                    int err_mul_cnt;
+                    
+                // golden model: DUT와 동일한 동작을 testbench 안에서 구현
+                     assign ref_mul = a * b; //always -> assign (data-mismatch debugging point)
+                     always @(posedge clk or negedge rst_n) begin
+                        if (!rst_n) begin
+                            ref_sum <= {ACC_W{1'b0}};
+                        end else if (clr) begin
+                            ref_sum <= {ACC_W{1'b0}};
+                        end else if (en) begin
+                            ref_sum <= ref_sum + ref_mul;
+                        end
+                      end
+                // Checker : DUT vs golden model
+                    always @(posedge clk or negedge rst_n) begin
+                        if(!rst_n) begin
+                            cycles_checked <= 0;
+                            err_acc_cnt <= 0;
+                            err_mul_cnt <= 0;
+                        end else begin
+                            cycles_checked++;
+                
+                      // mul 비교
+                      if (mul !== ref_mul) begin
+                        err_mul_cnt++;
+                        $display("ERROR! MUL mismatch: dut=%0d, ref=%0d, time=%0d ns",
+                                 mul, ref_mul, $time);
+                      end else begin
+                        $display("PASS!  MUL match   : dut=%0d, ref=%0d, time=%0d ns",
+                                 mul, ref_mul, $time);
+                      end
+                        
+                      // acc_sum 비교
+                      if (acc_sum !== ref_sum) begin
+                        err_acc_cnt++;
+                        $display("ERROR! ACC_SUM mismatch: dut=%0d, ref=%0d, time=%0d ns",
+                                 acc_sum, ref_sum, $time);
+                      end else begin
+                        $display("PASS!  ACC_SUM match   : dut=%0d, ref=%0d, time=%0d ns",
+                                 acc_sum, ref_sum, $time);
+                      end
+                      end
+                    end
 
+    - Step 3) DUT Instantiation + Clock/Reset 생성 + Golden Model & Checker
+      - step 3의 핵심 golden model에 대한 내용을 자세히 설명하면 다음과 같다.
+     - instantiation된 dut와 동일한 reference model(=golden model)을 생성하기 위해 ref_mul, ref_sum 등의 reference signal 및 마지막 summary에서 PASS/FAIL 판단을 위한 err_acc(mul)_cnt signal을 생성한다.
+     - 이후, golden model을 구현하기 위해 dut와 동일한 논리로 코드를 만들고, rst_n=0이면 카운터는 0으로 세팅되고, rst_n=1일 경우에만 앞서 정의한 err_mul(acc)_cnt 비교를 수행한다.
 
+                if(!rst_n) begin
+                   ...
+                end else begin
+                   cycles_checked++;
+                   // 비교는 여기서만 수행
+                end
 
+      - 이때, 비교는 'mul mismatch'와 'acc_sum mismatch'를 분리함으로써 mul mismatch면 comb multiplier부터 의심할 수 있도록, acc mismatch면 en/clr/rst_n/누산 순서를 의심할 수 있도록 테스트를 수행한다.       
