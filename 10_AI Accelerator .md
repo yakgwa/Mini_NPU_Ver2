@@ -744,10 +744,10 @@ Testcase 0th 손계산 추가 검증
 |**UnPacked**|**logic a [7:0];**|**독립된 워드**|**독립 신호 / 배열**|
 |**Mixed**|**logic [7:0] a [3:0];**|**비트의 묶음**|**8비트 슬롯이 4개**|
 
-          - Packed (logic [7:0] data)
-             - 연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
-             - 용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
-             - 비유: 8차선 고속도로 (한 번에 데이터가 흐름).
+  - Packed (logic [7:0] data)
+     - 연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
+     - 용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
+     - 비유: 8차선 고속도로 (한 번에 데이터가 흐름).
 
   - Unpacked (logic [7:0] data [0:3])
      - 연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
@@ -756,71 +756,29 @@ Testcase 0th 손계산 추가 검증
 
 - 2️⃣ Wire vs Reg
   - wire는 연결선(Connection), reg는 값을 담는 그릇(Container)
+  - ❌ : wire = 조합 회로, reg = 순차 회로(FF)
+  - ✅ : wire: 물리적인 전선. 드라이버(Driver)가 끊임없이 값을 밀어줘야 함.
+  - ✅ : reg: 절차적(Procedural) 블록 안에서 값을 할당받는 변수.
 
-❌ : wire = 조합 회로, reg = 순차 회로(FF)
+|구분|키워드|동작 방식|하드웨어 매핑|
+| :---: | :---: | :---:| :---:|
+|**Wire**|**assign**|**Continuous Drive(입력 변경 시, 즉시 반영)**|**물리적 배선 (Net), 게이트 출력선**|
+|**Reg**|**always**|**Store & Hold(이벤트 발생 시에만 갱신)**|**Flip-Flop, Latch(단, 조합논리 기술 시엔 wire처럼 동작)**|
 
-✅ : wire: 물리적인 전선. 드라이버(Driver)가 끊임없이 값을 밀어줘야 함.
+- 3️⃣ LHS vs. RHS (Timing & Pipeline)
+  - Clock Edge 시점에서 RHS는 현재(Current) 값, LHS는 미래(Next) 값
+  - RHS (Right-Hand Side): = 또는 <= 오른쪽에 있는 식. (Data Source)
+  - LHS (Left-Hand Side): 값을 할당받는 변수. (Data Destination)
 
-        reg: 절차적(Procedural) 블록 안에서 값을 할당받는 변수.
-
-구분
-
-키워드
-
-동작 방식
-
-하드웨어 매핑
-
-Wire
-
-assign
-
-Continuous Drive
-
-​
-
-(입력 변경 시, 즉시 반영)
-
-물리적 배선 (Net)
-
-​
-
-게이트 출력선
-
-Reg
-
-always
-
-Store & Hold
-
-​
-
-(이벤트 발생 시에만 갱신)
-
-Flip-Flop, Latch
-
-​
-
-(단, 조합논리 기술 시엔 wire처럼 동작)
-
-3. LHS vs. RHS (Timing & Pipeline)
-
-Clock Edge 시점에서 RHS는 현재(Current) 값, LHS는 미래(Next) 값
-
-RHS (Right-Hand Side): = 또는 <= 오른쪽에 있는 식. (Data Source)
-
-LHS (Left-Hand Side): 값을 할당받는 변수. (Data Destination)
-
-//Timing 관점에서의 해석
-always @(posedge clk) begin
-    a <= b;  // (1)
-    b <= a;  // (2)
-end
-RHS (읽기): 클럭이 뜨는 순간(posedge)의 이전 값 읽음.
-
-LHS (쓰기): 클럭이 뜬 직후(Update)에 값이 갱신됨.
-
-결과: 위 코드는 a와 b의 값이 서로 Swap 됨. (RHS가 동시에 읽혔기 때문)
+        //Timing 관점에서의 해석
+        always @(posedge clk) begin
+            a <= b;  // (1)
+            b <= a;  // (2)
+        end
+    
+  - RHS (읽기): 클럭이 뜨는 순간(posedge)의 이전 값 읽음.
+  - LHS (쓰기): 클럭이 뜬 직후(Update)에 값이 갱신됨.
+  - 결과: 위 코드는 a와 b의 값이 서로 Swap 됨. (RHS가 동시에 읽혔기 때문)
 
 ​
 
