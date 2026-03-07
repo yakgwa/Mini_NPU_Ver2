@@ -383,4 +383,248 @@ Timing Diagram 분석
 
     - activation stream(in_data)과 weight stream(weight)을 각각 독립적인 파이프라인(data_pipe, weight_pipe)으로 구성함으로써, 각 단계 i의 PE는 항상 a = data_pipe[i], b = weight_pipe[i]를 입력으로 받도록 설계했다. 결국 i번째 PE가 어떤 타이밍의 activation/weight를 곱하는지가 파이프라인 지연 자체로 결정되며, 별도의 제어 없이도 입력 정렬이 하드웨어적으로 고정된다. 
     - 이때, pipeline은 unpacked array를 사용하지 않고, Verilog의 호환성을 고려하여 명시적인 레지스터 배열 형태로 구현함으로써, 합성 결과가 예측 가능한 shift-register 체인으로 flat하게 생성되도록 했다.
+ 
+            output wire [ACC_W*NUM_PE-1:0] pe_mul,
+            output wire [ACC_W*NUM_PE-1:0] pe_acc_sum
+
+    - 특히 generate-for 내부의 if (i==0) ... else ... 분기 구조를 통해 i=0 스테이지에는 in_data를 직접 샘플링하는 레지스터가, i>0 스테이지에는 이전 스테이지 값을 받는 순수 shift register가 생성된다. 여기서 i는 런타임 변수가 아닌 genvar이므로, 해당 분기는 시뮬레이션 조건문이 아니라 elaboration 단계에서 하드웨어 구조 자체를 결정하는 분기로 작동한다. 동일한 패턴을 weight 쪽에도 적용함으로써, activation과 weight가 단계별로 동일한 방식으로 이동하고, 각 PE가 받는 입력쌍의 정렬이 파이프라인 구조만으로 정확히 보장된다.
+
+- Testbench(PE testbench와 거의 동일한 구조로 작성)
+
+        `timescale 1ns / 1ps
+        
+        module tb_pe_chain_1d();
+            localparam int DATA_W = 8;
+            localparam int ACC_W = 2*DATA_W;
+            localparam int NUM_PE = 4;
+            // Step 1) Interface Definition (생략)
+            logic                  clk;
+            logic                  rst_n;
+            logic                  clr;
+            logic                  en;
+            logic [DATA_W-1:0]     in_data;
+            logic [DATA_W-1:0]     weight;
+            logic [DATA_W-1:0]     out_data;
+            logic [ACC_W*NUM_PE-1:0]      pe_mul;
+            logic [ACC_W*NUM_PE-1:0]      pe_acc_sum;
+            //==========================================================
+            // Step 2) Constrained Random Transaction
+            //==========================================================
+            class pe_1d_txn;
+                rand bit [DATA_W-1:0] in_data;
+                rand bit [DATA_W-1:0] weight;
+                rand bit              en;
+                rand bit              clr;
+                // clr 5% 정도 constraint random
+                constraint c_clr { clr dist {1 := 5, 0 := 95}; }
+                // en 50% 정도 constraint random
+                constraint c_en  { en  dist {1 := 50, 0 := 50}; }
+            endclass
+            
+            pe_1d_txn ma = new; //constraint random class instantiation
+
+            //==========================================================
+            // Step 3) Top Module Instantiation
+            //==========================================================
+             pe_chain_1d #(.DATA_W(DATA_W), .ACC_W(ACC_W), .NUM_PE(NUM_PE)) dut (
+                .clk            (clk),
+                .rst_n          (rst_n),
+                .clr            (clr),
+                .en             (en),
+                .in_data        (in_data),
+                .weight         (weight),
+                .out_data       (out_data),
+                .pe_mul         (pe_mul),
+                .pe_acc_sum     (pe_acc_sum)
+             );  
+        //========================================================
+        // Clock / Reset
+        //========================================================
+            initial begin
+                clk = 1'b0;
+                forever #5 clk=~clk; //100MHz
+            end
+            
+            initial begin
+                rst_n = 1'b0;
+                clr = 1'b0;
+                en = 1'b0;
+                in_data = '0;
+                weight = '0;
+                
+                #30;
+                rst_n = 1'b1; //after 30ns -> rst_n=1, start
+             end
+        
+        //==========================================================
+        // Golden Model & Checker (Watchpoint)
+        //==========================================================
+            //Activation streaming pipeline
+            logic [DATA_W-1:0] ref_data_pipe [0:NUM_PE-1];      
+            logic [DATA_W-1:0] ref_weight_pipe [0:NUM_PE-1];     
+            logic [ACC_W-1:0] ref_pe_mul [0:NUM_PE-1];
+            logic [ACC_W-1:0] ref_acc_sum [0:NUM_PE-1];
+        
+            int cycles_checked;
+            int err_acc_cnt;
+            int err_mul_cnt;
+            
+        // golden model: DUT와 동일한 동작을 testbench 안에서 구현
+            //Data Pipeline Register
+            generate
+                for (genvar i=0; i<NUM_PE; i++) begin
+                    always @(posedge clk or negedge rst_n) begin
+                        if(!rst_n) begin
+                            ref_data_pipe[i] <= 0;
+                        end else begin
+                            if(i==0) ref_data_pipe[i] <= in_data;           //activation 입력
+                            else     ref_data_pipe[i] <= ref_data_pipe[i-1];//shift
+                        end
+                    end
+                end
+            endgenerate 
+            //Weight streaming pipeline
+            generate
+                for (genvar i=0; i<NUM_PE; i++) begin 
+                    always @(posedge clk or negedge rst_n) begin
+                        if(!rst_n) begin
+                            ref_weight_pipe[i] <= 0;
+                        end else begin
+                            if(i==0) ref_weight_pipe[i] <= weight;            // weight 입력
+                            else     ref_weight_pipe[i] <= ref_weight_pipe[i-1];  // shift
+                        end
+                    end
+                end
+            endgenerate    
+            //mac_pe instantiation of each stage
+            generate
+            for(genvar i=0; i<NUM_PE; i=i+1) begin    
+                mac_pe #(
+                .DATA_W (DATA_W),
+                .ACC_W  (ACC_W)
+                ) u_mac_pe (
+                .clk     (clk),
+                .rst_n   (rst_n),
+                .clr     (clr),
+                .en      (en),
+                .a       (ref_data_pipe[i]),
+                .b       (ref_weight_pipe[i]),
+                .mul     (ref_pe_mul[i]),
+                .acc_sum (ref_acc_sum[i])
+                );
+            end
+            endgenerate         
+        // Checker : DUT vs golden model
+            always @(posedge clk or negedge rst_n) begin
+                if(!rst_n) begin
+                    cycles_checked <= 0;
+                    err_acc_cnt <= 0;
+                    err_mul_cnt <= 0;
+                end else begin
+                    cycles_checked++;
+                end
+                
+                for(int i=0; i<NUM_PE; i++) begin
+                    // mul 비교
+                    if (pe_mul[i*ACC_W +: ACC_W] !== ref_pe_mul[i]) begin
+                        err_mul_cnt++;
+                        $display("ERROR! MUL mismatch: dut=%0d, ref=%0d, time=%0d ns",
+                                pe_mul[i], ref_pe_mul[i], $time);
+                    end else begin
+                        $display("PASS!  MUL match   : dut=%0d, ref=%0d, time=%0d ns",
+                                pe_mul[i*ACC_W +: ACC_W], ref_pe_mul[i], $time);
+                    end
+                    
+                    // acc_sum 비교
+                    if (pe_acc_sum[i*ACC_W +: ACC_W] !== ref_acc_sum[i]) begin
+                        err_acc_cnt++;
+                        $display("ERROR! ACC_SUM mismatch: dut=%0d, ref=%0d, time=%0d ns",
+                                pe_acc_sum[i*ACC_W +: ACC_W], ref_acc_sum[i], $time);
+                    end else begin
+                        $display("PASS!  ACC_SUM match   : dut=%0d, ref=%0d, time=%0d ns",
+                                pe_acc_sum[i*ACC_W +: ACC_W], ref_acc_sum[i], $time);
+                    end
+                end
+            end 
+
+            //========================================================
+            // Step 4) Functional Coverage
+            //========================================================
+            covergroup cg_pe_1d;
+                cp_en  : coverpoint ma.en  { bins b0={0}; bins b1={1}; }
+                cp_clr : coverpoint ma.clr { bins b0={0}; bins b1={1}; }            
+        
+                cp_in_data : coverpoint ma.in_data {
+                bins zero   = {0};
+                bins one = {1};
+                bins max = {(2**DATA_W)-1};
+                bins mid = default;
+                }
+        
+                cp_weight : coverpoint ma.weight {
+                bins z   = {0};
+                bins one = {1};
+                bins max = {(2**DATA_W)-1};
+                bins mid = default;
+                }
+            endgroup
+            
+            cg_pe_1d cg = new; //coverage class instantiation
+        
+            //========================================================
+            // Step 5) main
+            //========================================================
+            localparam int  MAX_CYCLES  = 2000;   // 무한 repeat 대신 안전하게 제한
+            localparam real COV_TARGET  = 100.0;  // 목표 커버리지(%)
+        
+            initial begin
+            //waiting 'reset off'
+            @(posedge rst_n);
+            @(posedge clk);
+            
+            $display("[TB] Time-based Random Stress START, duration = %0d ns", $time);
+                   
+            repeat(MAX_CYCLES) begin
+                @(negedge clk);
+                assert(ma.randomize());
+                    
+                en = ma.en;
+                clr = ma.clr;
+                in_data = ma.in_data;
+                weight = ma.weight;
+                    
+                cg.sample();
+                    
+                @(posedge clk); //next clk
+                    
+                if (cg.get_inst_coverage() >= COV_TARGET) begin
+                     $display("[TB] Coverage reached %0.2f%%, time=%0t",
+                           cg.get_inst_coverage(), $time);
+                     break;
+                end          
+            end
+        
+            //========================================================
+            // Summary
+            //========================================================
+            $display("==================================================");
+            $display("[TB] Simulation Summary");
+            $display("  Cycles checked     : %0d",    cycles_checked);
+            $display("  MUL mismatches     : %0d",    err_mul_cnt);
+            $display("  ACC_SUM mismatches : %0d",    err_acc_cnt);
+            if (err_mul_cnt == 0 && err_acc_cnt == 0) begin
+              $display("  RESULT             : PASS");
+            end else begin
+              $display("  RESULT             : FAIL");
+            end
+            $display("--------------------------------------------------");
+            $display("[TB] Functional Coverage");
+            $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
+            $display("  en         : %0.2f %%", cg.cp_en.get_inst_coverage());
+            $display("  clr        : %0.2f %%", cg.cp_clr.get_inst_coverage());
+            $display("==================================================");
+        
+            $finish;
+          end
+        endmodule
 
