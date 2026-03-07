@@ -178,20 +178,49 @@ Cycle 784
 - 따라서 최초 설계는 다음과 같이 4x4 Systolic Array 수준으로 설계하고자 한다. 물론 정확한 수치적인 측면은 컨트롤/파이프라인/메모리 구조에 따라 달라질 수 있으나, 설계 방향성을 잡기 위한 1차 모델로 제시한다. ‘최소한의 복잡도로 OS dataflow의 Systolic Array의 모든 핵심 개념을 드러내는 교육·검증용 구성’이다. 레이어1 병목을 이기기 위한 최적 설계라기보다는, 기존 ZyNet과 구조적 차이를 비교하기 위한 anchor로 최초 설계를 진행하고자 한다.
 - 여기서 기존 1D PE Chain과의 차이점은 한 샘플에 대한 레이턴시가 느려져도, 여러 샘플을 동시에 넣어 throughput에서 이득을 보자는 관점으로 Batch 4개를 한 번에 처리하고자 한다. 대략적인 Layer1 사이클 흐름은 다음과 같다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_15.png" width="400"/>
+
+Cycle 0
+
+<div align="left">
  
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_16.png" width="400"/>
 
-Cycle 0, 1
+Cycle 1
 
- 
+<div align="left">
 
-Cycle 2, 3
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_17.png" width="400"/>
 
- 
+Cycle 2
 
-Cycle 4, 5
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_18.png" width="400"/>
+
+Cycle 3
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_19.png" width="400"/>
+
+Cycle 4
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_20.png" width="400"/>
+
+Cycle 5
+
+<div align="left">
 
 ....
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_21.png" width="400"/>
+
+Cycle 784, 그 이후 ~
+
+<div align="left">
 
 Cycle 784, 그 이후 ~
 
