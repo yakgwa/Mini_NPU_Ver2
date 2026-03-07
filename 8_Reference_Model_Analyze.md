@@ -2,25 +2,25 @@
 
 ### 🔴 Reference Model, ZyNet의 문제점 파악 🔴
 - Performance1(Cycle & Latency/Throughput) 관점
- - Layer 1 Cycle
-  - 784 cycle : 최초 Layer1 입력 시, in[783:0] (X0~X783)이 직렬로 stream
-  - 2 cycle : myinputValid → weight_valid → mult_valid(neuron.v)로 valid가 2번 밀림
-  - 2 cycle : muxValid_f → sigValid → outvalid(neuron.v)로 valid가 2번 밀림
-  - Layer1 출력 valid : 784 + 2 + 2 cycle 
+  - Layer 1 Cycle
+    - 784 cycle : 최초 Layer1 입력 시, in[783:0] (X0~X783)이 직렬로 stream
+    - 2 cycle : myinputValid → weight_valid → mult_valid(neuron.v)로 valid가 2번 밀림
+    - 2 cycle : muxValid_f → sigValid → outvalid(neuron.v)로 valid가 2번 밀림
+    - Layer1 출력 valid : 784 + 2 + 2 cycle 
 
- - 직렬화 FSM1 + Layer 2 Cycle
-  - 1 cycle : o*_valid[0] → holdData<=x*_out으로 SEND 상태로 바꿈
-  - 30 cycle : Layer1의 출력 30개를 30클록에 걸쳐 Layer2로 흘림
-  - 2 cycle + 2cycle
-  - 직렬화 FSM + Layer2 출력 valid : 1 + 30 + 2 + 2 cycle
+  - 직렬화 FSM1 + Layer 2 Cycle
+    - 1 cycle : o*_valid[0] → holdData<=x*_out으로 SEND 상태로 바꿈
+    - 30 cycle : Layer1의 출력 30개를 30클록에 걸쳐 Layer2로 흘림
+    - 2 cycle + 2cycle
+    - 직렬화 FSM + Layer2 출력 valid : 1 + 30 + 2 + 2 cycle
 
- - 직렬화 FSM2 + Layer 3 Cycle
-  - 1 cycle + 20 cycle
-  - 2 cycle + 2cycle
-  - 직렬화 FSM + Layer2 출력 valid : 1 + 20 + 2 + 2 cycle
+  - 직렬화 FSM2 + Layer 3 Cycle
+    - 1 cycle + 20 cycle
+    - 2 cycle + 2cycle
+    - 직렬화 FSM + Layer2 출력 valid : 1 + 20 + 2 + 2 cycle
 
- - maxFinder Cycle
-  - 10cycle
+  - maxFinder Cycle
+   - 10cycle
 
 👉 이론적인 사이클 분석 결과, 단순 연산 흐름만 고려할 경우 입력 스트림이 시작된 시점으로부터 약 858 cycle 이후에 최종 결과(out_valid)가 출력된다.
 
