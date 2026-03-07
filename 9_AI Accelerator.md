@@ -178,4 +178,114 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
                    // 비교는 여기서만 수행
                 end
 
-      - 이때, 비교는 'mul mismatch'와 'acc_sum mismatch'를 분리함으로써 mul mismatch면 comb multiplier부터 의심할 수 있도록, acc mismatch면 en/clr/rst_n/누산 순서를 의심할 수 있도록 테스트를 수행한다.       
+      - 이때, 비교는 'mul mismatch'와 'acc_sum mismatch'를 분리함으로써 mul mismatch면 comb multiplier부터 의심할 수 있도록, acc mismatch면 en/clr/rst_n/누산 순서를 의심할 수 있도록 테스트를 수행한다.
+     
+            //========================================================
+            // Step 4) Functional Coverage
+            //========================================================
+            
+            covergroup cg_mac;
+                cp_en  : coverpoint ma.en  { bins b0={0}; bins b1={1}; }
+                cp_clr : coverpoint ma.clr { bins b0={0}; bins b1={1}; }            
+        
+                cp_a : coverpoint ma.a {
+                bins zero   = {0};
+                bins one = {1};
+                bins max = {(2**DATA_W)-1};
+                bins mid = default;
+                }
+        
+                cp_b : coverpoint ma.b {
+                bins z   = {0};
+                bins one = {1};
+                bins max = {(2**DATA_W)-1};
+                bins mid = default;
+                }
+            endgroup
+            
+            cg_mac cg = new; //coverage class instantiation
+
+    - Step 4) Functional Coverage
+      - functional coverage 정도를 확인하기 위해 cg_mac에 대한 covergroup class를 구성하였다. 
+      - 기본적으로 en/clr이 0/1 둘 다 나왔는지 확인하며, a, b에 대해서는 0, 1, max 같은 edge 값은 별도 bin으로 강제 관찰 및 나머지는 default로 뭉쳐서 나머지 값에 대해서도 나온 정도로만 확인한다.
+      - 검증 코드 작성 시, TB stimulus(ma.a/ma.b)를 coverage 대상으로 잡음으로써 dut 입력이 실제로 어떤 분포로 들어갔는지 수치적으로 확인하였다. (단, 정교한 cross까지 수행하진 않았고, edge 값 중심으로 구성함)
+     
+            //========================================================
+            // Step 5) main
+            //========================================================
+            localparam int  MAX_CYCLES  = 2000;   // 무한 repeat 대신 안전하게 제한
+            localparam real COV_TARGET  = 100.0;  // 목표 커버리지(%)
+        
+            initial begin
+            //waiting 'reset off'
+            @(posedge rst_n);
+            @(posedge clk);
+            
+            $display("[TB] Time-based Random Stress START, duration = %0d ns", $time);
+                   
+            repeat(MAX_CYCLES) begin
+                @(negedge clk);
+                assert(ma.randomize());
+                    
+                en = ma.en;
+                clr = ma.clr;
+                a = ma.a;
+                b = ma.b;
+                    
+                cg.sample();
+                    
+                @(posedge clk); //next clk
+                    
+                if (cg.get_inst_coverage() >= COV_TARGET) begin
+                     $display("[TB] Coverage reached %0.2f%%, time=%0t",
+                           cg.get_inst_coverage(), $time);
+                     break;
+                end          
+            end
+        
+            //========================================================
+            // Summary
+            //========================================================
+            $display("==================================================");
+            $display("[TB] Simulation Summary");
+            $display("  Cycles checked     : %0d",    cycles_checked);
+            $display("  MUL mismatches     : %0d",    err_mul_cnt);
+            $display("  ACC_SUM mismatches : %0d",    err_acc_cnt);
+            if (err_mul_cnt == 0 && err_acc_cnt == 0) begin
+              $display("  RESULT             : PASS");
+            end else begin
+              $display("  RESULT             : FAIL");
+            end
+            $display("--------------------------------------------------");
+            $display("[TB] Functional Coverage");
+            $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
+            $display("  en         : %0.2f %%", cg.cp_en.get_inst_coverage());
+            $display("  clr        : %0.2f %%", cg.cp_clr.get_inst_coverage());
+            $display("==================================================");
+        
+            $finish;
+          end
+        endmodule
+
+    - Step 5) Main : Stimulus loop
+      - simulation이 끝나지 않는 것을 방지하기 위해 MAX_CYCLES를 정의하고, 만약 coverage 목표를 조기에 달성하면 조기 종료할 수 있게 끔 COV_TARGET을 정의하였다. 최초 rst_n=1으로 변경한 다음부터, 루프를 돌면서 randomize stimulus를 진행한다.
+
+            repeat(MAX_CYCLES) begin
+                @(negedge clk);
+                ..
+                @(posedge clk); //posedge에서 값을 실제로 반영
+                    
+                if (cg.get_inst_coverage() >= COV_TARGET) begin
+                     $display("[TB] Coverage reached %0.2f%%, time=%0t",
+                           cg.get_inst_coverage(), $time);
+                     break;
+                end          
+            end
+
+
+
+
+
+
+
+
