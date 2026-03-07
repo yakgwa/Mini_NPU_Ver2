@@ -79,9 +79,9 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
             mac_txn ma = new; //constraint random class instantiation
 
     - Step 2) Constrained Random Transaction
-     - dist로 확률 가중치를 두어 constraint random 값을 mac_txn class로 정의
-     - clr dist {1 := 5, 0 := 95}; : 5% 가량 clr=1이 생성되도록 constraint
-     - en  dist {1 := 50, 0 := 50}; : 50% 가량 en=1이 생성되도록 constraint
+      - dist로 확률 가중치를 두어 constraint random 값을 mac_txn class로 정의
+      - clr dist {1 := 5, 0 := 95}; : 5% 가량 clr=1이 생성되도록 constraint
+      - en  dist {1 := 50, 0 := 50}; : 50% 가량 en=1이 생성되도록 constraint
 
 
 
