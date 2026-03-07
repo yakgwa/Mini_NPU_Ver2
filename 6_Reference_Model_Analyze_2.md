@@ -523,17 +523,13 @@
 		        muxValid_f <= !mux_valid & muxValid_d; //마지막 누산이 끝나는 순간에 대한 것
 		    end
 
-*입력은 왜 1 클록 지연이 필요한가?
+	- 입력은 왜 1 클록 지연이 필요한가?
+		- ren = myinputValid로서, inputvalid가 들어온 사이클에 weight가 바로 나오지 않고,(if (ren) wout <= mem[radd];), 다음 클록에 w_out이 유효하므로, 1 클록 지연 필요 
 
-ren = myinputValid로서, inputvalid가 들어온 사이클에 weight가 바로 나오지 않고,(if (ren) wout <= mem[radd];), 다음 클록에 w_out이 유효하므로, 1 클록 지연 필요 
-
-*mult_valid는 왜 2 클록 필요한가?
-
-Cycle N : myinputValid=1 //weight memory에 read 요청(ren=1)
-
-Cycle N+1 : w_out, myinputd 값 유효, 이 둘로 mul 계산이 진행되지만, mul은 레지스터이므로 결과는 N+1의 엣지에서 저장된다.(mul  <= $signed(myinputd) * $signed(w_out);)
-
-Cycle N+2 : 이제서야 레지스터된 mul이 안정적으로 존재한다.
+	- mult_valid는 왜 2 클록 필요한가?
+		- Cycle N : myinputValid=1 //weight memory에 read 요청(ren=1)
+		- Cycle N+1 : w_out, myinputd 값 유효, 이 둘로 mul 계산이 진행되지만, mul은 레지스터이므로 결과는 N+1의 엣지에서 저장된다.(mul  <= $signed(myinputd) * $signed(w_out);)
+		- Cycle N+2 : 이제서야 레지스터된 mul이 안정적으로 존재한다.
 
 ​
 
