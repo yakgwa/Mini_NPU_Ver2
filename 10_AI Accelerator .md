@@ -325,12 +325,13 @@
                       end
                   endtask
 
+     - Step 3) DUT Instantiation + Clock/Reset 생성 + Golden Model & Checker
+       - Golden Model 정의에 대해서 주로 살펴보도록 하자. 기존에 mac.pe.v, pe_chain_1d.v에서는 golden model을 dut 그대로 작성하였지만, 2D Array에서는 task automatic으로 선언하여 golden model을 간소화 시켰다.
+       - 우선, Golden Model의 결과를 저장하는 저장 배열 C_ref를 전역 선언한다.
 
+                int unsigned C_ref [0:ROWS-1][0:COLS-1];
 
-
-
-
-
+     - 이후, C_ref = A X B 행렬곱을 계산하기 위해, acc_local를 (r,c)마다 0으로 초기화하여, constraint random으로 생성한 sa.A, sa.B를 acc_local에 담아서 정답인 C_ref를 계산하도록 한다.
 
 
 
