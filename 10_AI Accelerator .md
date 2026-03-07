@@ -663,6 +663,13 @@ Testcase 0th 손계산 추가 검증
 
 <div align="left">
 
+|위치 (PE = C_ref)|Reference Model|Proposed NPU|
+|------|---|---|
+|**단일 샘플 latency**|👍 **빠름**|👎 **느림**|
+|**배치 throughput**|👍|👍👍👍|
+|**면적**|👎|👍👍|
+|**확장성**|👎|👍👍|
+|**데이터 재사용**|👎|👍👍|
 
 
 
