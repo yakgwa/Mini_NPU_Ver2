@@ -23,13 +23,21 @@
   - 10cycle
 
 👉 이론적인 사이클 분석 결과, 단순 연산 흐름만 고려할 경우 입력 스트림이 시작된 시점으로부터 약 858 cycle 이후에 최종 결과(out_valid)가 출력된다.
+
 👉 이때 Latency는 단순히 MAC 연산량에 의해서만 결정되는 것이 아니라, 레이어 간 결과를 전달하기 위해 수행되는 데이터 재포맷 및 직렬화 과정에 의해 크게 증가한다.
+
 👉 입력이 1 cycle당 1개의 stream 형태로 유입되며, 해당 입력은 내부에서 모든 뉴런으로 브로드캐스트되어 각 뉴런이 동일 입력에 대해 병렬로 누산 연산을 수행한다.
+
 👉 그러나 각 레이어의 출력은 벡터 형태로 생성된 이후, 직렬화 FSM을 통해 다시 스칼라 스트림으로 변환되어 다음 레이어로 전달된다. 이 과정에서 레이어마다 추가적인 사이클 오버헤드가 발생한다.
+
 👉 Throughput은 단위 시간당 처리 가능한 입력 샘플 수로 정의되며, 본 설계에서는 MNIST 이미지 한 장(in[783:0])의 처리율에 해당한다.
+
 👉 ZyNet 구조상 Layer2와 Layer3는 Layer1이 전체 입력(784 cycle)을 모두 처리하여 출력을 생성하기 전까지는 어떠한 연산도 수행할 수 없다.
+
 👉 결과적으로, 하나의 샘플에 대해 Layer1이 784 cycle 동안 연산을 수행한 이후, Layer2와 Layer3는 각각 30 cycle과 20 cycle 동안만 활성화된다.
+
 👉 이 동안 다음 입력 샘플은 다시 Layer1에서 784 cycle 동안 처리되며, 이 중 약 734 cycle(≈ 92.6%) 동안 Layer2와 Layer3는 유휴 상태(idle)로 남게 된다.
+
 👉 따라서 ZyNet의 steady-state throughput은 가장 연산량이 큰 Layer1에 의해 사실상 결정되며, Layer2와 Layer3의 하드웨어 자원은 throughput 관점에서 충분히 활용되지 못한다. 
 
 - Performance2(TOPS, Memory) 관점
@@ -37,9 +45,9 @@
 <table>
   <tr>
     <td width="250px">레이어</td>
-    <td>Layer1</td>
-    <td>Layer2</td>    
-    <td>Layer3</td>   
+    <td>입력 수</td>
+    <td>뉴런 수</td>    
+    <td>MAC 수</td>   
   </tr>
   <tr>
     <td><strong>Peak Memory Usage</strong></td>
