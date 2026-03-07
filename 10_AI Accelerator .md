@@ -162,8 +162,23 @@
           input  wire [ROWS*DATA_W-1:0] a_in_row,
           input  wire [COLS*DATA_W-1:0] b_in_col,
 
+    - Verilog 문법 상 module 내부에서는 unpacked array로 선언할 수 없기 때문에, a_in_row는 "각 row마다 DATA_W짜리 하나씩", 총 `ROWS*DATA_W` 비트로 선언한다.
+    - 예컨대, ROWS=4, DATA_W=8이면 32bit가 된다. 마찬가지로 b_in_col도 "각 col마다 DATA_W짜리 하나씩", 총 `COLS*DATA_W` 비트로 선언한다.
+     - 이러한 packed array는 a_data, b_data와 같이 unpacked array로 선언된 wire를 generate 구문으로 다시 맵핑하여 가독성을 높일 수 있다.
 
-
+            wire [DATA_W-1:0] a_data         [0:ROWS-1];               // a_in_row -> row별 분리
+            wire [DATA_W-1:0] b_data         [0:COLS-1];               // b_in_col -> col별 분
+            .....
+            //<1D Vector(a,b_in_row) → 2D Vector(a,b_data)>
+            // +: DATA_W : Part-select(starting index + width)
+            generate
+              for (r=0; r<ROWS; r=r+1) begin : GEN_SPLIT_A
+                assign a_data[r] = a_in_row[r*DATA_W +: DATA_W];
+              end
+              for (c=0; c<COLS; c=c+1) begin : GEN_SPLIT_B
+                assign b_data[c] = b_in_col[c*DATA_W +: DATA_W];
+              end
+            endgenerate
 
 
 
