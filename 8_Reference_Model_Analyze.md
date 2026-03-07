@@ -51,11 +51,25 @@
   </tr>
   <tr>
     <td><strong>Layer1</strong></td>
-    <td><strong>Layer2</strong></td>
-    <td><strong>Layer3</strong></td>    
+    <td><strong>784</strong></td>
+    <td><strong>30</strong></td>    
+    <td><strong>23,520</strong></td>        
   </tr>
   <tr>
-    <td colspan="2" style="text-align: center;"><strong>100개 Data Sample에 대한 Accuracy : 99%</strong></td>
+    <td><strong>Layer2</strong></td>
+    <td><strong>30</strong></td>
+    <td><strong>20</strong></td>    
+    <td><strong>600</strong></td>        
+  </tr>
+  <tr>
+    <td><strong>Layer3</strong></td>
+    <td><strong>20</strong></td>
+    <td><strong>10</strong></td>    
+    <td><strong>200</strong></td>        
+  </tr>  
+  <tr>
+    <td colspan="3" style="text-align: center;"><strong>합계(mul+add를 op 2개로 보면 48,640 ops</strong></td>
+    <td><strong>24,320 MAC/inf</strong></td>  
   </tr>
 </table>
 
