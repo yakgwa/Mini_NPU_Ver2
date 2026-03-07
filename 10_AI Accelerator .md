@@ -746,17 +746,16 @@ Testcase 0th 손계산 추가 검증
 
   - Packed (logic [7:0] data)
    - 연산: 통째로 산술 연산 가능 (+, *), 비트 슬라이싱 가능.
-   - 용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
-   - 비유: 8차선 고속도로 (한 번에 데이터가 흐름).
+     - 용도: AXI 데이터 버스, ALU 입력, MAC 연산 유닛.
+     - 비유: 8차선 고속도로 (한 번에 데이터가 흐름).
 
   - Unpacked (logic [7:0] data [0:3])
-   - 연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
-   - 용도: Systolic Array의 PE 집합, FIFO 버퍼, 메모리 뱅크.
+     - 연산: 한 번에 연산 불가. data[0], data[1] 처럼 개별 접근해야 함.
+     - 용도: Systolic Array의 PE 집합, FIFO 버퍼, 메모리 뱅크.
      - 비유: 4개의 독립된 1차선 도로 (각자 따로 움직임).
 
-2. Wire vs. Reg
-
-wire는 연결선(Connection), reg는 값을 담는 그릇(Container)
+- 2️⃣ Wire vs Reg
+  - wire는 연결선(Connection), reg는 값을 담는 그릇(Container)
 
 ❌ : wire = 조합 회로, reg = 순차 회로(FF)
 
