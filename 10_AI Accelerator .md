@@ -334,31 +334,68 @@
      - 이후, C_ref = A X B 행렬곱을 계산하기 위해, acc_local를 (r,c)마다 0으로 초기화하여, constraint random으로 생성한 sa.A, sa.B를 acc_local에 담아서 정답인 C_ref를 계산하도록 한다.
  
 
-          //==========================================================
-          // Step 4) Functional Coverage
-          //==========================================================
-          covergroup cg_sa_2d;
-            cp_en  : coverpoint sa.en  { bins b0={0}; bins b1={1}; }
-            cp_clr : coverpoint sa.clr { bins b0={0}; bins b1={1}; }
-        
-            cp_A00 : coverpoint sa.A[0][0] {
-              bins zero = {0};
-              bins one  = {1};
-              bins max  = {(2**DATA_W)-1};
-              bins mid = {[2:(2**DATA_W)-2]};
-            }
-        
-            cp_B00 : coverpoint sa.B[0][0] {
-              bins zero = {0};
-              bins one  = {1};
-              bins max  = {(2**DATA_W)-1};
-              bins mid = {[2:(2**DATA_W)-2]};
-            }
-          endgroup
-        
-          cg_sa_2d cg = new;
+                  //==========================================================
+                  // Step 4) Functional Coverage
+                  //==========================================================
+                  covergroup cg_sa_2d;
+                    cp_en  : coverpoint sa.en  { bins b0={0}; bins b1={1}; }
+                    cp_clr : coverpoint sa.clr { bins b0={0}; bins b1={1}; }
+                
+                    cp_A00 : coverpoint sa.A[0][0] {
+                      bins zero = {0};
+                      bins one  = {1};
+                      bins max  = {(2**DATA_W)-1};
+                      bins mid = {[2:(2**DATA_W)-2]};
+                    }
+                
+                    cp_B00 : coverpoint sa.B[0][0] {
+                      bins zero = {0};
+                      bins one  = {1};
+                      bins max  = {(2**DATA_W)-1};
+                      bins mid = {[2:(2**DATA_W)-2]};
+                    }
+                  endgroup
+                
+                  cg_sa_2d cg = new;
 
+     - Step 4) Functional Coverage
+       - (기존 글에서 작성한 mac_pe.v, pe_chain_1d.v에 대한 검증 코드에서 정의한 coverage class와 동일) 
 
+(최초 주입 입력 A[0][0], B[0][0]를 4개의 구간으로 cover(0, 1, max(255), mid(2~254))
+
+                  //==========================================================
+                  // Step 5) main
+                  //==========================================================
+                  
+                //==========================================================
+                // Main 돌입 직전, DUT에 입력을 어떻게 넣을지 정의하는 Driver
+                //==========================================================
+                
+                  //Data Skew : a_in_row, b_in_col을 한 사이클 분량으로 세팅하는 입력 스케줄러
+                  task automatic drive_skew_cycle(input int t);
+                    for (int r=0; r<ROWS; r++) begin
+                      int kA = t - r;
+                      if ((kA >= 0) && (kA < K_DIM)) a_in_row[r] = sa.A[r][kA];
+                      else                           a_in_row[r] = '0;
+                    end
+                
+                    for (int c=0; c<COLS; c++) begin
+                      int kB = t - c;
+                      if ((kB >= 0) && (kB < K_DIM)) b_in_col[c] = sa.B[kB][c];
+                      else                           b_in_col[c] = '0;
+                    end
+                  endtask
+                
+                  // testcase 경계에서 acc_sum 초기화용 clr 1-cycle 펄스
+                  task automatic clr_pulse_1cycle();
+                    @(negedge clk);
+                    clr = 1'b1;
+                    for (int r=0; r<ROWS; r++) a_in_row[r] = '0;
+                    for (int c=0; c<COLS; c++) b_in_col[c] = '0;
+                    @(posedge clk);
+                    @(negedge clk);
+                    clr = 1'b0;
+                  endtask  
 
 
 
