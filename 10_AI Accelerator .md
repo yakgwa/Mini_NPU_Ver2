@@ -788,10 +788,10 @@ Testcase 0th 손계산 추가 검증
     3) Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
   - 👉 non-blocking은 Flip-Flop(Shift Register) 모델링과 완벽히 대응
 
-​- 5️⃣  assign vs. always
+- 5️⃣  assign vs. always
   - assign은 "회로 결선(Wiring)", always는 "동작 기술(Behavior)"
   - assign (Continuous Assignment)
-  - 의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
+    - 의미: "이 신호는 저 신호와 영구적으로 연결되어 있다."
   - 대상: wire 타입만 가능.
   - always (Procedural Assignment)
   - 의미: "특정 조건(이벤트)이 발생하면, 절차에 따라 값을 바꾼다."
