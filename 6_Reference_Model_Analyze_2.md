@@ -772,38 +772,24 @@
                 end
             end
 
-매 클록 count_1=0, valid=0, o1_valid[0]==1이 되는 순간, holdData_1 <= x1_out로 병렬 출력 벡터를 버퍼에 캡처해서 상태를 SEND로 전환
+	- 매 클록 count_1=0, valid=0, o1_valid[0]==1이 되는 순간, holdData_1 <= x1_out로 병렬 출력 벡터를 버퍼에 캡처해서 상태를 SEND로 전환
 
-2. FSM : SEND 상태
+- 2️⃣ FSM : SEND 상태
 
-SEND: begin
+		SEND: begin
+		    out_data_1 <= holdData_1[`dataWidth-1:0];
+		    holdData_1 <= holdData_1 >> `dataWidth;
+		    count_1 <= count_1 +1;
+		    data_out_valid_1 <= 1;
+		    if (count_1 == `numNeuronLayer1)
+		    begin
+		        state_1 <= IDLE;
+		        data_out_valid_1 <= 0;
+		    end
+		end
 
-    out_data_1 <= holdData_1[`dataWidth-1:0];
-
-    holdData_1 <= holdData_1 >> `dataWidth;
-
-    count_1 <= count_1 +1;
-
-    data_out_valid_1 <= 1;
-
-    if (count_1 == `numNeuronLayer1)
-
-    begin
-
-        state_1 <= IDLE;
-
-        data_out_valid_1 <= 0;
-
-    end
-
-end
-
-out_data_1 <= holdData_1[dataWidth-1:0] : holdData의 LSB쪽 1개 원소를 꺼내서 출력
-
-holdData_1 <= holdData_1 >> dataWidth : 한 원소만큼 오른쪽 shift, 다음 클록에는 “다음 원소”가 LSB로 내려오게 됨
-
-count_1 <= count_1 + 1 : 몇 개 보냈는지 증가
-
-data_out_valid_1 <= 1 : SEND 동안은 매 클록 유효
-
-즉, x1_out의 구성 순서가 x1_out[dataWidth-1:0] = 0번 뉴런 출력, x1_out[2*dataWidth-1:dataWidth] = 1번 뉴런 출력 ... 이런 식으로 “LSB부터 뉴런0,1,2…” 라는 가정
+	- out_data_1 <= holdData_1[dataWidth-1:0] : holdData의 LSB쪽 1개 원소를 꺼내서 출력
+	- holdData_1 <= holdData_1 >> dataWidth : 한 원소만큼 오른쪽 shift, 다음 클록에는 “다음 원소”가 LSB로 내려오게 됨
+	- count_1 <= count_1 + 1 : 몇 개 보냈는지 증가
+	- data_out_valid_1 <= 1 : SEND 동안은 매 클록 유효
+	- 즉, x1_out의 구성 순서가 x1_out[dataWidth-1:0] = 0번 뉴런 출력, x1_out[2*dataWidth-1:dataWidth] = 1번 뉴런 출력 ... 이런 식으로 “LSB부터 뉴런0,1,2…” 라는 가정
