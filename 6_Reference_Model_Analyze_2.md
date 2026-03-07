@@ -533,113 +533,86 @@
 
 ​
 
-9. Weight_Memory 인스턴스 및 Activation 선택
+- 9️⃣ Weight_Memory 인스턴스 및 Activation 선택
 
-Weight_Memory #(..) WM(..);
+		Weight_Memory #(..) WM(..);
+		generate
+		if(actType == "sigmoid") begin:siginst
+		//Instantiation of ROM for sigmoid
+		Sig_ROM #(..) s1(..);
+		end
+		else
+		begin:ReLUinst
+		ReLU #(..) s1(..);
+		end
+		endgenerate​
 
-generate
+  ✅ MaxFinder.v
 
-if(actType == "sigmoid") begin:siginst
+		module maxFinder #(parameter numInput=10,parameter inputWidth=16)(
+		input           i_clk,
+		input [(numInput*inputWidth)-1:0]   i_data,
+		input           i_valid,
+		output reg [31:0]o_data,
+		output  reg     o_data_valid
+		);
+		
+		reg [inputWidth-1:0] maxValue;
+		reg [(numInput*inputWidth)-1:0] inDataBuffer;
+		integer counter;
+		
+		always @(posedge i_clk)
+		begin
+		    o_data_valid <= 1'b0;
+		    if(i_valid)
+		    begin
+		        maxValue <= i_data[inputWidth-1:0];
+		        counter <= 1;
+		        inDataBuffer <= i_data;
+		        o_data <= 0;
+		    end
+		    else if(counter == numInput)
+		    begin
+		        counter <= 0;
+		        o_data_valid <= 1'b1;
+		    end
+		    else if(counter != 0)
+		    begin
+		        counter <= counter + 1;
+		        if(inDataBuffer[counter*inputWidth+:inputWidth] > maxValue)
+		        begin
+		            maxValue <= inDataBuffer[counter*inputWidth+:inputWidth];
+		            o_data <= counter;
+		        end
+		    end
+		end
+		endmodule
+  
+- 1️⃣ 파라미터 / 입/출력 구조
 
-//Instantiation of ROM for sigmoid
+		parameter 
+		    numInput=10,     //입력 개수
+		    inputWidth=16   //입력 비트 폭
+		​
+			input           i_clk,
+			input [(numInput*inputWidth)-1:0]   i_data, //numInput개 입력을 한 번에 묶어 들어오는 버스
+			input           i_valid,                                         //i_data 묶음의 유효함 트리거
+			output reg [31:0]o_data,                               //최댓값을 가진 원소의 인덱스(0~numInput-1)를 출력
+			output  reg     o_data_valid                          //결과 유효 펄스
 
-Sig_ROM #(..) s1(..);
+- 2️⃣ 레지스터 선언
 
-end
+		reg [inputWidth-1:0] maxValue;                                  //현재까지 발견한 최댓값
+		reg [(numInput*inputWidth)-1:0] inDataBuffer;         //i_valid 순간의 i_data를 저장해 두는 버퍼
+		integer counter;                                                           //몇 번째 원소를 검사 중인지 나타내는 카운터
 
-else
+- 3️⃣ 메인 블록
 
-begin:ReLUinst
+		always @(posedge i_clk)
+		begin
+		    o_data_valid <= 1'b0;
 
-ReLU #(..) s1(..);
-
-end
-
-endgenerate
-
-​
-
-4. MaxFinder.v
-
-module maxFinder #(parameter numInput=10,parameter inputWidth=16)(
-input           i_clk,
-input [(numInput*inputWidth)-1:0]   i_data,
-input           i_valid,
-output reg [31:0]o_data,
-output  reg     o_data_valid
-);
-
-reg [inputWidth-1:0] maxValue;
-reg [(numInput*inputWidth)-1:0] inDataBuffer;
-integer counter;
-
-always @(posedge i_clk)
-begin
-    o_data_valid <= 1'b0;
-    if(i_valid)
-    begin
-        maxValue <= i_data[inputWidth-1:0];
-        counter <= 1;
-        inDataBuffer <= i_data;
-        o_data <= 0;
-    end
-    else if(counter == numInput)
-    begin
-        counter <= 0;
-        o_data_valid <= 1'b1;
-    end
-    else if(counter != 0)
-    begin
-        counter <= counter + 1;
-        if(inDataBuffer[counter*inputWidth+:inputWidth] > maxValue)
-        begin
-            maxValue <= inDataBuffer[counter*inputWidth+:inputWidth];
-            o_data <= counter;
-        end
-    end
-end
-endmodule
-1. 파라미터 / 입/출력 구조
-
-parameter 
-
-    numInput=10,     //입력 개수
-
-    inputWidth=16   //입력 비트 폭
-
-​
-
-input           i_clk,
-
-input [(numInput*inputWidth)-1:0]   i_data, //numInput개 입력을 한 번에 묶어 들어오는 버스
-
-input           i_valid,                                         //i_data 묶음의 유효함 트리거
-
-output reg [31:0]o_data,                               //최댓값을 가진 원소의 인덱스(0~numInput-1)를 출력
-
-output  reg     o_data_valid                          //결과 유효 펄스
-
-​
-
-2. 레지스터 선언
-
-reg [inputWidth-1:0] maxValue;                                  //현재까지 발견한 최댓값
-
-reg [(numInput*inputWidth)-1:0] inDataBuffer;         //i_valid 순간의 i_data를 저장해 두는 버퍼
-
-integer counter;                                                           //몇 번째 원소를 검사 중인지 나타내는 카운터
-
-​
-
-3. 메인 블록
-
-always @(posedge i_clk)
-
-begin
-
-    o_data_valid <= 1'b0;
-
-매 클록마다 일단 o_data_valid를 0으로 내려. 결과가 나올 때만 아래에서 1로 올려서 1 클록짜리 valid 펄스를 만들겠다는 구조.
+	- 매 클록마다 일단 o_data_valid를 0으로 내려. 결과가 나올 때만 아래에서 1로 올려서 1 클록짜리 valid 펄스를 만들겠다는 구조.
 
 ​
 
