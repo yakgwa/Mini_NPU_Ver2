@@ -646,8 +646,7 @@ Timing Diagram 분석
 
 <div align="left">
 
-
-    👉 기존 단일 PE에서는 random input이 선언된 이후, mul 출력이 조합 논리 특성상 즉시 정상적인 값으로 계산된다. 다만, 본 구조에서는 입력이 직접 PE로 들어가지 않고 입력 파이프라인을 거치기 때문에, 실제 mul 값은 입력 파이프 레지스터가 갱신되는 rising edge 이후에 관측된다. 같은 이유로 acc_sum은 조합 결과인 mul을 입력으로 받아 그 다음 rising edge에서 갱신되는 순차 동작을 보인다. 또한 pe_mul, pe_acc_sum은 packed array로 묶여 있어 파형 상 e61905b0 …와 같이 하나로 관측되며, golden model에서는 unpacked array 형태로 각 PE의 결과가 개별적으로 비교되었다. 최종적으로는 이러한 전 과정에 대해 DUT의 출력이 golden model과 사이클 단위로 완전히 동일함을 확인하였다.
+👉 기존 단일 PE에서는 random input이 선언된 이후, mul 출력이 조합 논리 특성상 즉시 정상적인 값으로 계산된다. 다만, 본 구조에서는 입력이 직접 PE로 들어가지 않고 입력 파이프라인을 거치기 때문에, 실제 mul 값은 입력 파이프 레지스터가 갱신되는 rising edge 이후에 관측된다. 같은 이유로 acc_sum은 조합 결과인 mul을 입력으로 받아 그 다음 rising edge에서 갱신되는 순차 동작을 보인다. 또한 pe_mul, pe_acc_sum은 packed array로 묶여 있어 파형 상 e61905b0 …와 같이 하나로 관측되며, golden model에서는 unpacked array 형태로 각 PE의 결과가 개별적으로 비교되었다. 최종적으로는 이러한 전 과정에 대해 DUT의 출력이 golden model과 사이클 단위로 완전히 동일함을 확인하였다.
 
 👉 1 cycle, en = 1 상태로 첫 번째 @(posedge clk)가 들어올 경우, 입력 파이프가 갱신되고 해당 입력에 대한 mul 결과가 rising edge 직후 정상적으로 반영된다.
 
