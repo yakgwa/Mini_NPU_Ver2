@@ -232,170 +232,170 @@
 	- ren=1 일 때만, wout으로 출력을 갱신한다.
 	- 즉, 뉴런 내부에서는 Input data valid (ren=1) → next rising clock에서 wout 수신 → MAC 연산 수행
 
-3. Neuron.v - FC 뉴런 1개를 구현
+✅ Neuron.v - FC 뉴런 1개를 구현
 
-module neuron #(parameter layerNo=0,neuronNo=0,numWeight=784,dataWidth=16,
-sigmoidSize=5,weightIntWidth=1,actType="relu",biasFile="",weightFile="")(
-    input           clk,
-    input           rst,
-    input [dataWidth-1:0]    myinput,
-    input           myinputValid,
-    input           weightValid,
-    input           biasValid,
-    input [31:0]    weightValue,
-    input [31:0]    biasValue,
-    input [31:0]    config_layer_num,
-    input [31:0]    config_neuron_num,
-    output[dataWidth-1:0]    out,
-    output reg      outvalid   
-    );
-    parameter addressWidth = $clog2(numWeight);
-    
-    reg         wen; //weight 메모리 write enable
-    wire        ren; //weight 메모리 read enable
-    reg [addressWidth-1:0] w_addr; //write를 위한 weight 메모리 주소
-    reg [addressWidth:0]   r_addr; //read를 위한 weight 메모리 주소
-    reg [dataWidth-1:0]  w_in; //메모리에 쓸 weight
-    wire [dataWidth-1:0] w_out; //메모리에서 읽은 weight 값
-    reg [2*dataWidth-1:0]  mul; 
-    reg [2*dataWidth-1:0]  sum;
-    reg [2*dataWidth-1:0]  bias; //곱셈/누산/bias 결과는 dataWidth 폭의 두 배
-    reg [31:0]    biasReg[0:0]; //pre-trained 모드에서 biasfile에 읽어올 저장용 레지스터
-    reg         weight_valid; 
-    reg         mult_valid;
-    wire        mux_valid;
-    reg         sigValid; //valid 파이프라인용 플래그으로, 유효한 결과가 나오는 타이밍 알려줌
-    wire [2*dataWidth:0] comboAdd; //mul+sum 결과
-    wire [2*dataWidth:0] BiasAdd; //bias+sum 결과
-    reg  [dataWidth-1:0] myinputd; //입력을 1클록 지연(파이프라인 정렬)
-    reg muxValid_d; //mux_valid의 엣지 검출용
-    reg muxValid_f; //''
-    reg addr=0; //biasReg 인덱스로 사용하는데, 여기선 상수 0처럼 동작
-
-   //Loading weight values into the momory
-    always @(posedge clk)
-    begin
-        if(rst) begin //reset(초기화)
-            w_addr <= {addressWidth{1'b1}};
-            wen <=0;
-        end
-        else if(weightValid & (config_layer_num==layerNo) & (config_neuron_num==neuronNo))
-        begin
-            w_in <= weightValue;
-            w_addr <= w_addr + 1;
-            wen <= 1;
-        end
-        else
-            wen <= 0;
-    end
-	
-    assign mux_valid = mult_valid;
-    assign comboAdd = mul + sum;
-    assign BiasAdd = bias + sum;
-    assign ren = myinputValid;
-    
-	`ifdef pretrained
-		initial begin
-			$readmemb(biasFile,biasReg);
-		end
-		always @(posedge clk)
-		begin
-            bias <= {biasReg[addr][dataWidth-1:0],{dataWidth{1'b0}}};
-        end
-	`else
-		//생략
-	`endif   
-    
-    always @(posedge clk)
-    begin
-        if(rst|outvalid)
-            r_addr <= 0;
-        else if(myinputValid)
-            r_addr <= r_addr + 1;
-    end
-    
-    always @(posedge clk)
-    begin
-        mul  <= $signed(myinputd) * $signed(w_out);
-    end 
-    
-    always @(posedge clk)
-    begin
-        if(rst|outvalid)
-            sum <= 0;
-        else if((r_addr == numWeight) & muxValid_f)
-        begin
-            if(!bias[2*dataWidth-1] &!sum[2*dataWidth-1] & BiasAdd[2*dataWidth-1]) begin            begin
-                sum[2*dataWidth-1] <= 1'b0;
-                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b1}};
-            end
-            else if(bias[2*dataWidth-1] & sum[2*dataWidth-1] &  !BiasAdd[2*dataWidth-1]) begin
-                sum[2*dataWidth-1] <= 1'b1;
-                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b0}};
-            end
-            else
-                sum <= BiasAdd; 
-        end
-        else if(mux_valid)
-        begin
-            if(!mul[2*dataWidth-1] & !sum[2*dataWidth-1] & comboAdd[2*dataWidth-1])
-            begin
-                sum[2*dataWidth-1] <= 1'b0;
-                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b1}};
-            end
-            else if(mul[2*dataWidth-1] & sum[2*dataWidth-1] & !comboAdd[2*dataWidth-1])
-            begin
-                sum[2*dataWidth-1] <= 1'b1;
-                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b0}};
-            end
-            else
-                sum <= comboAdd; 
-        end
-    end
-    
-    always @(posedge clk)
-    begin
-        myinputd <= myinput;
-        weight_valid <= myinputValid;
-        mult_valid <= weight_valid;
-        sigValid <= ((r_addr == numWeight) & muxValid_f) ? 1'b1 : 1'b0;
-        outvalid <= sigValid;
-        muxValid_d <= mux_valid;
-        muxValid_f <= !mux_valid & muxValid_d;
-    end
-    
-    //Instantiation of Memory for Weights
-    Weight_Memory #(.numWeight(numWeight),.neuronNo(neuronNo),.layerNo(layerNo),
-.addressWidth(addressWidth),.dataWidth(dataWidth),.weightFile(weightFile)) WM(
-        .clk(clk),
-        .wen(wen),
-        .ren(ren),
-        .wadd(w_addr),
-        .radd(r_addr[addressWidth-1:0]),
-        .win(w_in),
-        .wout(w_out)
-    );
-    
-	generate
-		if(actType == "sigmoid")
-		begin:siginst
-		//Instantiation of ROM for sigmoid
-			Sig_ROM #(.inWidth(sigmoidSize),.dataWidth(dataWidth)) s1(
-			.clk(clk),
-			.x(sum[2*dataWidth-1-:sigmoidSize]),
-			.out(out)
-		);
-		end
-		else
-		begin:ReLUinst
-			ReLU #(.dataWidth(dataWidth),.weightIntWidth(weightIntWidth)) s1 (
-			.clk(clk),
-			.x(sum),
-			.out(out)
-		);
-		end
-	endgenerate
-endmodule
+		module neuron #(parameter layerNo=0,neuronNo=0,numWeight=784,dataWidth=16,
+		sigmoidSize=5,weightIntWidth=1,actType="relu",biasFile="",weightFile="")(
+		    input           clk,
+		    input           rst,
+		    input [dataWidth-1:0]    myinput,
+		    input           myinputValid,
+		    input           weightValid,
+		    input           biasValid,
+		    input [31:0]    weightValue,
+		    input [31:0]    biasValue,
+		    input [31:0]    config_layer_num,
+		    input [31:0]    config_neuron_num,
+		    output[dataWidth-1:0]    out,
+		    output reg      outvalid   
+		    );
+		    parameter addressWidth = $clog2(numWeight);
+		    
+		    reg         wen; //weight 메모리 write enable
+		    wire        ren; //weight 메모리 read enable
+		    reg [addressWidth-1:0] w_addr; //write를 위한 weight 메모리 주소
+		    reg [addressWidth:0]   r_addr; //read를 위한 weight 메모리 주소
+		    reg [dataWidth-1:0]  w_in; //메모리에 쓸 weight
+		    wire [dataWidth-1:0] w_out; //메모리에서 읽은 weight 값
+		    reg [2*dataWidth-1:0]  mul; 
+		    reg [2*dataWidth-1:0]  sum;
+		    reg [2*dataWidth-1:0]  bias; //곱셈/누산/bias 결과는 dataWidth 폭의 두 배
+		    reg [31:0]    biasReg[0:0]; //pre-trained 모드에서 biasfile에 읽어올 저장용 레지스터
+		    reg         weight_valid; 
+		    reg         mult_valid;
+		    wire        mux_valid;
+		    reg         sigValid; //valid 파이프라인용 플래그으로, 유효한 결과가 나오는 타이밍 알려줌
+		    wire [2*dataWidth:0] comboAdd; //mul+sum 결과
+		    wire [2*dataWidth:0] BiasAdd; //bias+sum 결과
+		    reg  [dataWidth-1:0] myinputd; //입력을 1클록 지연(파이프라인 정렬)
+		    reg muxValid_d; //mux_valid의 엣지 검출용
+		    reg muxValid_f; //''
+		    reg addr=0; //biasReg 인덱스로 사용하는데, 여기선 상수 0처럼 동작
+		
+		   //Loading weight values into the momory
+		    always @(posedge clk)
+		    begin
+		        if(rst) begin //reset(초기화)
+		            w_addr <= {addressWidth{1'b1}};
+		            wen <=0;
+		        end
+		        else if(weightValid & (config_layer_num==layerNo) & (config_neuron_num==neuronNo))
+		        begin
+		            w_in <= weightValue;
+		            w_addr <= w_addr + 1;
+		            wen <= 1;
+		        end
+		        else
+		            wen <= 0;
+		    end
+			
+		    assign mux_valid = mult_valid;
+		    assign comboAdd = mul + sum;
+		    assign BiasAdd = bias + sum;
+		    assign ren = myinputValid;
+		    
+			`ifdef pretrained
+				initial begin
+					$readmemb(biasFile,biasReg);
+				end
+				always @(posedge clk)
+				begin
+		            bias <= {biasReg[addr][dataWidth-1:0],{dataWidth{1'b0}}};
+		        end
+			`else
+				//생략
+			`endif   
+		    
+		    always @(posedge clk)
+		    begin
+		        if(rst|outvalid)
+		            r_addr <= 0;
+		        else if(myinputValid)
+		            r_addr <= r_addr + 1;
+		    end
+		    
+		    always @(posedge clk)
+		    begin
+		        mul  <= $signed(myinputd) * $signed(w_out);
+		    end 
+		    
+		    always @(posedge clk)
+		    begin
+		        if(rst|outvalid)
+		            sum <= 0;
+		        else if((r_addr == numWeight) & muxValid_f)
+		        begin
+		            if(!bias[2*dataWidth-1] &!sum[2*dataWidth-1] & BiasAdd[2*dataWidth-1]) begin            begin
+		                sum[2*dataWidth-1] <= 1'b0;
+		                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b1}};
+		            end
+		            else if(bias[2*dataWidth-1] & sum[2*dataWidth-1] &  !BiasAdd[2*dataWidth-1]) begin
+		                sum[2*dataWidth-1] <= 1'b1;
+		                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b0}};
+		            end
+		            else
+		                sum <= BiasAdd; 
+		        end
+		        else if(mux_valid)
+		        begin
+		            if(!mul[2*dataWidth-1] & !sum[2*dataWidth-1] & comboAdd[2*dataWidth-1])
+		            begin
+		                sum[2*dataWidth-1] <= 1'b0;
+		                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b1}};
+		            end
+		            else if(mul[2*dataWidth-1] & sum[2*dataWidth-1] & !comboAdd[2*dataWidth-1])
+		            begin
+		                sum[2*dataWidth-1] <= 1'b1;
+		                sum[2*dataWidth-2:0] <= {2*dataWidth-1{1'b0}};
+		            end
+		            else
+		                sum <= comboAdd; 
+		        end
+		    end
+		    
+		    always @(posedge clk)
+		    begin
+		        myinputd <= myinput;
+		        weight_valid <= myinputValid;
+		        mult_valid <= weight_valid;
+		        sigValid <= ((r_addr == numWeight) & muxValid_f) ? 1'b1 : 1'b0;
+		        outvalid <= sigValid;
+		        muxValid_d <= mux_valid;
+		        muxValid_f <= !mux_valid & muxValid_d;
+		    end
+		    
+		    //Instantiation of Memory for Weights
+		    Weight_Memory #(.numWeight(numWeight),.neuronNo(neuronNo),.layerNo(layerNo),
+		.addressWidth(addressWidth),.dataWidth(dataWidth),.weightFile(weightFile)) WM(
+		        .clk(clk),
+		        .wen(wen),
+		        .ren(ren),
+		        .wadd(w_addr),
+		        .radd(r_addr[addressWidth-1:0]),
+		        .win(w_in),
+		        .wout(w_out)
+		    );
+		    
+			generate
+				if(actType == "sigmoid")
+				begin:siginst
+				//Instantiation of ROM for sigmoid
+					Sig_ROM #(.inWidth(sigmoidSize),.dataWidth(dataWidth)) s1(
+					.clk(clk),
+					.x(sum[2*dataWidth-1-:sigmoidSize]),
+					.out(out)
+				);
+				end
+				else
+				begin:ReLUinst
+					ReLU #(.dataWidth(dataWidth),.weightIntWidth(weightIntWidth)) s1 (
+					.clk(clk),
+					.x(sum),
+					.out(out)
+				);
+				end
+			endgenerate
+		endmodule
     
 1. 파라미터 / 입/출력 구조
 
