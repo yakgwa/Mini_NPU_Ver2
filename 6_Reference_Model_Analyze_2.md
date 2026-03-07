@@ -493,7 +493,7 @@
 		            end
 		            else
 		                sum <= BiasAdd;
-		end
+					end
 
 	- if(!bias[MSB] & !sum[MSB] & BiasAdd[MSB]) : bias와 sum 모두 양수인데, assign BiasAdd = bias + sum;에 대한 BiasAdd는 2's complement에 의해 음수가 되면서 overflow된 상황이다. 이때는 sum을 MAX로 saturation시킨다.
 	- else if(bias[2*dataWidth-1] & sum[2*dataWidth-1] &  !BiasAdd[2*dataWidth-1]) : 이는 반대로 bias와 sum 모두 음수인데, 이 두 값 모두 음수여서 BiasAdd가 양수로 overflow된 상황이므로, 이때는 sum을 MIN로 saturation시킨다.
@@ -508,7 +508,7 @@
 		  end
 		end
 
-		- 이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
+		👉 이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
 
 - 8️⃣ 입력/Valid Pipeline 정렬 + outvalid 생성
 
