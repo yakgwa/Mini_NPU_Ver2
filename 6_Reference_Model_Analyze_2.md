@@ -462,12 +462,12 @@
 
 ​- 6️⃣ Mul pipeline
 
-			always @(posedge clk)
-			begin
-			  mul <= $signed(myinputd) * $signed(w_out);
-			end
+		always @(posedge clk)
+		begin
+		  mul <= $signed(myinputd) * $signed(w_out);
+		end
 
-	- myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
+	👉myinputd(지연 입력)과 w_out(메모리의 weight)를 곱한다.
 
 - 7️⃣ sum + saturation + bias add
 
