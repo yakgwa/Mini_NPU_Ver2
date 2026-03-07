@@ -45,40 +45,43 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
  
 - Testbench
 
-                `timescale 1ns/1ps
-                
-                module tb_mac_pe;
-                
-                    localparam int DATA_W = 8;
-                    localparam int ACC_W = 2*DATA_W;
-                
-                    // Step 1) Interface Definition (생략)
-                    logic                  clk;
-                    logic                  rst_n;
-                    logic                  clr;
-                    logic                  en;
-                    logic [DATA_W-1:0]     a;
-                    logic [DATA_W-1:0]     b;
-                    logic [ACC_W-1:0]      mul;
-                    logic [ACC_W-1:0]      acc_sum;
-                    
-                    //==========================================================
-                    // Step 2) Constrained Random Transaction
-                    //==========================================================
-                    class mac_txn;
-                        rand bit [DATA_W-1:0] a;
-                        rand bit [DATA_W-1:0] b;
-                        rand bit              en;
-                        rand bit              clr;
-                        // clr 5% 정도 constraint random
-                        constraint c_clr { clr dist {1 := 5, 0 := 95}; }
-                        // en 50% 정도 constraint random
-                        constraint c_en  { en  dist {1 := 50, 0 := 50}; }
-                    endclass
-                    
-                    mac_txn ma = new; //constraint random class instantiation
+        `timescale 1ns/1ps
+        
+        module tb_mac_pe;
+        
+            localparam int DATA_W = 8;
+            localparam int ACC_W = 2*DATA_W;
+        
+            // Step 1) Interface Definition (생략)
+            logic                  clk;
+            logic                  rst_n;
+            logic                  clr;
+            logic                  en;
+            logic [DATA_W-1:0]     a;
+            logic [DATA_W-1:0]     b;
+            logic [ACC_W-1:0]      mul;
+            logic [ACC_W-1:0]      acc_sum;
+            
+            //==========================================================
+            // Step 2) Constrained Random Transaction
+            //==========================================================
+            class mac_txn;
+                rand bit [DATA_W-1:0] a;
+                rand bit [DATA_W-1:0] b;
+                rand bit              en;
+                rand bit              clr;
+                // clr 5% 정도 constraint random
+                constraint c_clr { clr dist {1 := 5, 0 := 95}; }
+                // en 50% 정도 constraint random
+                constraint c_en  { en  dist {1 := 50, 0 := 50}; }
+            endclass
+            
+            mac_txn ma = new; //constraint random class instantiation
 
-
+    - Step 2) Constrained Random Transaction
+     - dist로 확률 가중치를 두어 constraint random 값을 mac_txn class로 정의
+     - clr dist {1 := 5, 0 := 95}; : 5% 가량 clr=1이 생성되도록 constraint
+     - en  dist {1 := 50, 0 := 50}; : 50% 가량 en=1이 생성되도록 constraint
 
 
 
