@@ -508,7 +508,7 @@
 		  end
 		end
 
-	- 이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
+		- 이는 단순 일반 단계에서의 mul + sum 수행인데, 이 역시 위에서 알아보았던 overflow 체크 후 필요한 상황에 대해서는 sum을 saturation시킬 수 있도록 한다.
 
 - 8️⃣ 입력/Valid Pipeline 정렬 + outvalid 생성
 
