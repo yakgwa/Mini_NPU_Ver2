@@ -282,10 +282,105 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
                 end          
             end
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_24.png" width="400"/>
 
+log 값
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_25.png" width="400"/>
 
+Timing Diagram Full View
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_26.png" width="400"/>
+
+Timing Diagram 분석
+
+<div align="left">
+
+- assign 구문으로 구현된 multiplier는 random input 선언 이후 즉시, 정상적인 값이 도출되는 것을 확인하였다. 또한 전 과정에 대해 golden model과의 동일함을 보여주었다.
+- en = 0일 때 @(posedge clk)가 들어올 경우, mul의 결과가 acc_sum의 결과가 반영되지 않아야 하는 점이 정상적으로 동작하였다.
+- en = 1일 때 @(posedge clk)가 들어올 경우, mul의 결과가 acc_sum의 결과가 반영되어야 하는 점이 정상적으로 동작하였다.
+- clr = 1일 때 @(posedge clk)가 들어올 경우, acc_sum의 저장된 값이 0으로 초기화 되어야 하는 점이 정상적으로 동작하였다.
+
+### 1D (1-dimension) 1X4 PE Chain (Output Stationary)
+
+- DUT
+
+        module pe_chain_1d #(
+            parameter integer DATA_W = 8,
+            parameter integer ACC_W = 2*DATA_W,
+            parameter integer NUM_PE = 4
+        )(
+            input wire clk,
+            input wire rst_n,
+            input wire clr,
+            input wire en,
+            
+            //activation stream
+            input wire[DATA_W-1:0] in_data,
+            //weight stream
+            input wire[DATA_W-1:0] weight,
+            // pipeline delay checking
+            output wire [DATA_W-1:0] out_data,
+        
+            output wire [ACC_W*NUM_PE-1:0] pe_mul,
+            output wire [ACC_W*NUM_PE-1:0] pe_acc_sum
+        );
+            //Activation streaming pipeline
+            reg [DATA_W-1:0] data_pipe [0:NUM_PE-1];
+            assign out_data = data_pipe[NUM_PE-1];       
+            //Data Pipeline Register
+            genvar i;
+            generate
+                for (i=0; i<NUM_PE; i=i+1) begin
+                    always @(posedge clk or negedge rst_n) begin
+                        if(!rst_n) begin
+                            data_pipe[i] <= 0;
+                        end else begin
+                            if(i==0) data_pipe[i] <= in_data;           //activation 입력
+                            else     data_pipe[i] <= data_pipe[i-1];    //shift
+                        end
+                    end
+                end
+            endgenerate
+            //Weight streaming pipeline
+            reg [DATA_W-1:0] weight_pipe [0:NUM_PE-1];
+            generate
+                for (i=0; i<NUM_PE; i=i+1) begin
+                    always @(posedge clk or negedge rst_n) begin
+                        if(!rst_n) begin
+                            weight_pipe[i] <= 0;
+                        end else begin
+                            if(i==0) weight_pipe[i] <= weight;            // weight 입력
+                            else     weight_pipe[i] <= weight_pipe[i-1];  // shift
+                        end
+                    end
+                end
+            endgenerate    
+            
+            //mac_pe instantiation of each stage
+            generate
+            for(i=0; i<NUM_PE; i=i+1) begin    
+                mac_pe #(
+                .DATA_W (DATA_W),
+                .ACC_W  (ACC_W)
+                ) u_mac_pe (
+                .clk     (clk),
+                .rst_n   (rst_n),
+                .clr     (clr),
+                .en      (en),
+                .a       (data_pipe[i]),
+                .b       (weight_pipe[i]),
+                .mul     (pe_mul    [(i+1)*ACC_W  - 1 : i*ACC_W ]),
+                .acc_sum (pe_acc_sum[(i+1)*ACC_W  - 1 : i*ACC_W ])
+                );
+            end
+          endgenerate
+        endmodule
+
+    - activation stream(in_data)과 weight stream(weight)을 각각 독립적인 파이프라인(data_pipe, weight_pipe)으로 구성함으로써, 각 단계 i의 PE는 항상 a = data_pipe[i], b = weight_pipe[i]를 입력으로 받도록 설계했다. 결국 i번째 PE가 어떤 타이밍의 activation/weight를 곱하는지가 파이프라인 지연 자체로 결정되며, 별도의 제어 없이도 입력 정렬이 하드웨어적으로 고정된다. 
+    - 이때, pipeline은 unpacked array를 사용하지 않고, Verilog의 호환성을 고려하여 명시적인 레지스터 배열 형태로 구현함으로써, 합성 결과가 예측 가능한 shift-register 체인으로 flat하게 생성되도록 했다.
 
