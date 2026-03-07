@@ -143,22 +143,31 @@ Cycle 0
 
 <div align="left">
  
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_12.png" width="400"/>
 
-Cycle 0, Cycle1
+Cycle 1
 
+<div align="left">
 
-Cycle 2
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_13.png" width="400"/>
+
+Cycle 1
+
+<div align="left">
 
 ....
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_13.png" width="400"/>
 
 Cycle 784
 
-그림을 통해 알 수 있듯이 Layer1의 출력은 총 30개인데, 1x2 Chain은 그 중 2개의 출력만 만든다. 따라서 Layer1을 모두 수행하려면 이를 15번 반복해야 한다. Layer2, 3도 같은 방식으로 진행한다.
+<div align="left">
 
-대략적인 1 sample latency: 784×15+30×10+20×5=12,160 cycles
+- 그림을 통해 알 수 있듯이 Layer1의 출력은 총 30개인데, 1x2 Chain은 그 중 2개의 출력만 만든다. 따라서 Layer1을 모두 수행하려면 이를 15번 반복해야 한다. Layer2, 3도 같은 방식으로 진행한다.
 
-기존 ZyNet은 (아주 대략적으로) 784+30+20=834 cycles 수준으로 1 sample이 나온다고 보면, 면적은 어마어마하게 줄일 수 있으나, 1 sample latency는 현저히 느려진다.
+- 대략적인 1 sample latency: 784×15+30×10+20×5=12,160 cycles
+
+- 기존 ZyNet은 (아주 대략적으로) 784+30+20=834 cycles 수준으로 1 sample이 나온다고 보면, 면적은 어마어마하게 줄일 수 있으나, 1 sample latency는 현저히 느려진다.
 
 ​
 
