@@ -473,7 +473,7 @@
            - c=3: -1 → 0
            - ➡️ b_in_col = [0, 1, 0, 0]
 
-​​       - 4️⃣ t=3일 때
+       - 4️⃣ t=3일 때
          - A 입력
            - r=0: kA=3 → A[0][3]=4
            - r=1: kA=2 → A[1][2]=7
@@ -491,9 +491,9 @@
        - clr_pulse_1cycle : testcase 경계에서 acc_sum 초기화용 clr 1-cycle 펄스
        - DUT의 clr을 정확히 1clk 동안만 1로 만들어 누산을 초기화하려는 목적의 함수이다.
 
-          task automatic clr_pulse_1cycle();
-            @(negedge clk);
-            clr = 1'b1;
+                  task automatic clr_pulse_1cycle();
+                    @(negedge clk);
+                    clr = 1'b1;
 
 
 
