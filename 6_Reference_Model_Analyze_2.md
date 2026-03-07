@@ -424,7 +424,7 @@
 
 	- weight 메모리 주소에 필요한 비트 수를 계산해야 한다. 예컨대, numWeight=784라면, $clog2(784)=10으로, 784개의 weight를 넣기 위해 1024개의 entry에 대한 메모리 주소를 만든다.
 
-3. weight 값을 메모리에 write하는 always 구문 중 일부
+- 3️⃣ weight 값을 메모리에 write하는 always 구문 중 일부
 
         else if(weightValid & (config_layer_num==layerNo) & (config_neuron_num==neuronNo))
 
@@ -440,9 +440,7 @@
 
 weightValid=1이고, 외부가 지정한 config_layer/neuron_num이 해당 뉴런의 layerNo/neuronNo와 같으면, w_in에 weightValue를 넣고, w_addr 증가, wen=1로 메모리에 write
 
-​
-
-4. pre-trained 모드에서 Bias
+- 4️⃣ pre-trained 모드에서 Bias
 
 initial begin
 
