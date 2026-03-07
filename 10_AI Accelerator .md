@@ -783,9 +783,9 @@ Testcase 0th 손계산 추가 검증
 - 4️⃣ Non-blocking (<=) 동작 메커니즘
   - 모두 읽고(Sample), 나중에 한꺼번에 쓴다(Update)
   - 하드웨어 시뮬레이터(Event Queue)는 always @(posedge clk)를 다음과 같이 처리한다.
-  - 1) Event: posedge clk 발생 (Trigger).
-  - 2) Evaluation (RHS): 블록 내 모든 수식의 RHS 값(현재 값)을 캡처.
-  - 3) Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
+    1) Event: posedge clk 발생 (Trigger).
+    2) Evaluation (RHS): 블록 내 모든 수식의 RHS 값(현재 값)을 캡처.
+    3) Update (LHS): 캡처한 값을 바탕으로 LHS 변수들을 일제히 갱신.
   - 👉 non-blocking은 Flip-Flop(Shift Register) 모델링과 완벽히 대응
 
 ​- 5️⃣  assign vs. always
