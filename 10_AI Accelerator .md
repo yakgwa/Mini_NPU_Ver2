@@ -159,8 +159,8 @@
 
     - 우선 최초 외부에서 들어오는 입력을 다음과 같이 flat bus로 받는다.
 
-        input  wire [ROWS*DATA_W-1:0] a_in_row,
-        input  wire [COLS*DATA_W-1:0] b_in_col,
+                input  wire [ROWS*DATA_W-1:0] a_in_row,
+                input  wire [COLS*DATA_W-1:0] b_in_col,
 
 
 
