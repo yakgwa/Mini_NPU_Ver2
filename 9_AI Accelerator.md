@@ -168,8 +168,8 @@ step1) interface definition ▶ step2) Constrained Random Transaction ▶ Step 3
 
     - Step 3) DUT Instantiation + Clock/Reset 생성 + Golden Model & Checker
       - step 3의 핵심 golden model에 대한 내용을 자세히 설명하면 다음과 같다.
-     - instantiation된 dut와 동일한 reference model(=golden model)을 생성하기 위해 ref_mul, ref_sum 등의 reference signal 및 마지막 summary에서 PASS/FAIL 판단을 위한 err_acc(mul)_cnt signal을 생성한다.
-     - 이후, golden model을 구현하기 위해 dut와 동일한 논리로 코드를 만들고, rst_n=0이면 카운터는 0으로 세팅되고, rst_n=1일 경우에만 앞서 정의한 err_mul(acc)_cnt 비교를 수행한다.
+      - instantiation된 dut와 동일한 reference model(=golden model)을 생성하기 위해 ref_mul, ref_sum 등의 reference signal 및 마지막 summary에서 PASS/FAIL 판단을 위한 err_acc(mul)_cnt signal을 생성한다.
+      - 이후, golden model을 구현하기 위해 dut와 동일한 논리로 코드를 만들고, rst_n=0이면 카운터는 0으로 세팅되고, rst_n=1일 경우에만 앞서 정의한 err_mul(acc)_cnt 비교를 수행한다.
 
                 if(!rst_n) begin
                    ...
