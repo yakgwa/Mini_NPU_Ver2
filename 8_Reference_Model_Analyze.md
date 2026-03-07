@@ -84,7 +84,7 @@
   
   - 따라서 재사용성 없는 데이터플로우와 레이어 간 직렬화로 인한 낮은 연산 활용도를 개선할 필요가 있다.
 
-​- Power/Area 관점
+- Power/Area 관점
 
   - “뉴런 복제”로 인해 면적이 뉴런 수에 선형으로 폭증 : 각 뉴런마다 weight memory + mul + add + acc + activation 등이 들어 있는데, 이는 뉴런 수와 레이어 수에 면적이 선형적으로 증가하기 떄문에 확장성 측면에서 최악이다.
     - Layer 2/3 면적이 "성능에 기여하지 않는 면적"이 됨 : 동작 듀티란, 전체 시간 중 실제로 유효 연산을 하고 있는 비율을 의미하는데, Layer 1은 매 cycle마다 30 MAC을 동작하지만, 한 샘플 처리 기준 Layer2, Layer3는 대부분의 시간을 놀고 있기 떄문에 동작 듀티가 매우 낮다. 실질적으로 Layer2, Layer3을 합친 면적은 Layer1과 거의 비슷하지만, 성능 대비 면적 효율(area efficiency)는 매우 나쁘다. Performance 측면에서도 Throughput은 Layer2, Layer3가 아닌 오로지 Layer1이 결정하며, Power 측면에서도 Layer2, Layer3는 대부분 idle 상태이지만 지속적인 전력이 발생할 수 밖에 없다. (clock gating이 거의 없는 구조이기 때문에 계속 전력을 소모할 수 밖에 없음.)
