@@ -602,9 +602,54 @@
                 Unified Buffer가 중간 결과 저장
                 외부 메모리 접근 불필요 (On-chip 완료)
 
+      - BUFFER_WR_L2/BUFFER_WR_L3 전이 동작
+            BUFFER_WR_L1과 동일
+            --------------------------------------------------------------------------
+            Buffer 재사용
+            Layer 2 결과를 동일한 Buffer에 덮어쓰기
+            주소: (img_idx × 32) + neuron_idx
+            Layer 1 결과는 더이상 필요없으므로 OK
+            cur_neuron_total = 10
+            
+            Group 0: (0+1)*4 = 4  < 10  → 다음 그룹
+            Group 1: (1+1)*4 = 8  < 10  → 다음 그룹
+            Group 2: (2+1)*4 = 12 >= 10 → Layer 완료, OUTPUT_SCAN으로 전이
+            
+            최종 출력 위치 :
+            Image 0: Addr 0~9   (10개 뉴런)
+            Image 1: Addr 32~41
+            Image 2: Addr 64~73
+            Image 3: Addr 96~105
 
-
-
+                        // ============================================================
+                        // [OUTPUT_SCAN] Buffer에서 최종 10개 결과를 MaxFinder로 전달
+                        // ============================================================
+                        OUTPUT_SCAN: begin
+                            if (k_cnt < 10) begin
+                                mf_in_data[0][k_cnt*dataWidth +: dataWidth] <= buf_r_data[0];
+                                mf_in_data[1][k_cnt*dataWidth +: dataWidth] <= buf_r_data[1];
+                                mf_in_data[2][k_cnt*dataWidth +: dataWidth] <= buf_r_data[2];
+                                mf_in_data[3][k_cnt*dataWidth +: dataWidth] <= buf_r_data[3];
+                            end
+        
+                            if (k_cnt == 10) begin
+                                mf_valid_pulse <= 1;
+                                state <= DONE;
+                                o_done_interrupt <= 1;
+                            end else begin
+                                k_cnt <= k_cnt + 1;
+                            end
+                        end
+        
+                        // ============================================================
+                        // [DONE] 추론 완료 (대기)
+                        // ============================================================
+                        DONE: begin
+                            // 아무것도 하지 않음. 외부 리셋으로 재시작.
+                        end
+                    endcase
+                end
+            end
 
 
 
