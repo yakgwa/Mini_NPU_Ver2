@@ -875,3 +875,71 @@
                     end
                 endtask
 
+    - NPU_TOP.v의 buf_wen(Buffer Write Enable) 일 때, 즉, 버퍼에 쓰지 않는 타이밍에 발생하는 무의미한 데이터를 걸러내고, 실제로 메모리에 유효한 값이 저장되는 순간만 포착하도록 trigger condition을 걸어줌으로써 출력 로그를 남긴다.
+ 
+                1. cycle_cnt: 현재 시각.
+                2. dut.buf_w_addr (Destination): 결과값이 저장될 버퍼의 주소
+                                                 다음 레이어 계산 때 이 주소에서 데이터를 읽어옴
+                3. $signed(dut.buf_w_data) (Final Result): 버퍼에 실제로 기록되는 최종 값
+                4. $signed(dut.act_out_val) (After Activation): Activation Function 통과 직후 값
+                5. $signed(dut.au_in_psum) (Raw Input 1): PE Array에서 계산되어 나온 Partial Sum
+                                                          (아직 Bias 더하기 전)
+                6. $signed(dut.au_in_bias) (Raw Input 2): 메모리나 레지스터에서 가져온 Bias
+                7. dut.write_seq_cnt: 한 번에 여러 데이터를 쓸 때(Sequential Write), 
+                                      현재 몇 번째 데이터를 쓰고 있는지 나타내는 카운터
+
+                // ======================================================================================
+                // Task: Verify MIF Loading
+                // ======================================================================================
+                task verify_mif_loading;
+                    begin
+                        $fdisplay(log_fd, "============================================================");
+                        $fdisplay(log_fd, "  MIF Loading Verification");
+                        $fdisplay(log_fd, "============================================================");
+            
+                        // Weight Bank: Layer 1, Neuron 0의 첫 5개 가중치 샘플 출력
+                        $fdisplay(log_fd, "  [Weight] L1_N0 w[0]=%d, w[1]=%d, w[2]=%d, w[3]=%d, w[4]=%d",
+                            $signed(dut.wb.w_l1[0]),
+                            ..
+                            $signed(dut.wb.w_l1[4]));
+            
+                        // Bias Bank: Layer 1의 첫 4개 Bias 샘플
+                        $fdisplay(log_fd, "  [Bias]   L1: b[0]=%d, b[1]=%d, b[2]=%d, b[3]=%d",
+                            $signed(dut.bb.w_b_l1[0]),
+                            ..
+                            $signed(dut.bb.w_b_l1[3]));
+            
+                        // Image Memory: 첫 5개 픽셀 (TB 측)
+                        $fdisplay(log_fd, "  [Image0] px[0]=%d, px[1]=%d, px[2]=%d, px[3]=%d, px[4]=%d, label=%d",
+                            $signed(img_mem_0[0]), $signed(img_mem_0[1]),
+                            $signed(img_mem_0[2]), $signed(img_mem_0[3]),
+                            $signed(img_mem_0[4]), img_mem_0[784]);
+                        $fdisplay(log_fd, "  [Image1] px[0]=%d, label=%d", $signed(img_mem_1[0]), img_mem_1[784]);
+                        $fdisplay(log_fd, "  [Image2] px[0]=%d, label=%d", $signed(img_mem_2[0]), img_mem_2[784]);
+                        $fdisplay(log_fd, "  [Image3] px[0]=%d, label=%d", $signed(img_mem_3[0]), img_mem_3[784]);
+            
+                        $fdisplay(log_fd, "  MIF Loading Done.");
+                        $fdisplay(log_fd, "============================================================");
+            
+                        // Console echo
+                        $display("[TB] MIF Loading Done. Check log file for details.");
+                    end
+                endtask
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
