@@ -4,73 +4,73 @@
 
 - DUT
 
-    module PE #(
-        parameter integer dataWidth = 8
-        )(
-        input signed  [dataWidth-1:0]   i_a,        // op1
-        input signed  [dataWidth-1:0]   i_b,        // op2
+        module PE #(
+            parameter integer dataWidth = 8
+            )(
+            input signed  [dataWidth-1:0]   i_a,        // op1
+            input signed  [dataWidth-1:0]   i_b,        // op2
+            
+            input                           i_clk,      // clock
+            input                           i_rst,      // reset
+            input                           i_en,       // enable
+            
+            output signed [2*dataWidth-1:0] o_psum      // partial sum
+            `ifdef DEBUG
+          , output signed [2*dataWidth-1:0] o_debugmul  // debug output
+            `endif
+            );
+            
+            // 16bit ACC register
+            reg signed [2*dataWidth-1:0] sum = 0;
+            
+            // 16bit Multiply Result
+            wire signed [2*dataWidth-1:0] mul; 
+            
+            // 임시 덧셈 결과용 (Saturation Check)
+            wire signed [2*dataWidth:0] Comboadd;     
+            
+            // 부호 비트 확인용
+            wire sign_mul;
+            wire sign_sum;
+            wire sign_res;
         
-        input                           i_clk,      // clock
-        input                           i_rst,      // reset
-        input                           i_en,       // enable
+            // 1. Multiply
+            assign mul = i_a * i_b;
+         
+            // 2. Add (Pre-Calc)
+            assign Comboadd = sum + mul;
         
-        output signed [2*dataWidth-1:0] o_psum      // partial sum
-        `ifdef DEBUG
-      , output signed [2*dataWidth-1:0] o_debugmul  // debug output
-        `endif
-        );
+            // 3. Signed-Bit 추출 (MSB)
+            assign sign_mul = mul[2*dataWidth-1];
+            assign sign_sum = sum[2*dataWidth-1];
+            assign sign_res = Comboadd[2*dataWidth-1];
         
-        // 16bit ACC register
-        reg signed [2*dataWidth-1:0] sum = 0;
+            `ifdef DEBUG
+            assign o_debugmul = mul; 
+            `endif
+            
+            always @(posedge i_clk) begin
+                if(i_rst) begin
+                    sum <= 0;
+                end else if (i_en) begin 
+                    // Case 1: 양수 + 양수 = 음수 (Positive Overflow)
+                    if (!sign_mul && !sign_sum && sign_res) begin
+                        sum <= {1'b0, {(2*dataWidth-1){1'b1}}}; 
         
-        // 16bit Multiply Result
-        wire signed [2*dataWidth-1:0] mul; 
+                    // Case 2: 음수 + 음수 = 양수 (Negative Overflow)
+                    end else if (sign_mul && sign_sum && !sign_res) begin
+                        sum <= {1'b1, {(2*dataWidth-1){1'b0}}};
         
-        // 임시 덧셈 결과용 (Saturation Check)
-        wire signed [2*dataWidth:0] Comboadd;     
-        
-        // 부호 비트 확인용
-        wire sign_mul;
-        wire sign_sum;
-        wire sign_res;
-    
-        // 1. Multiply
-        assign mul = i_a * i_b;
-     
-        // 2. Add (Pre-Calc)
-        assign Comboadd = sum + mul;
-    
-        // 3. Signed-Bit 추출 (MSB)
-        assign sign_mul = mul[2*dataWidth-1];
-        assign sign_sum = sum[2*dataWidth-1];
-        assign sign_res = Comboadd[2*dataWidth-1];
-    
-        `ifdef DEBUG
-        assign o_debugmul = mul; 
-        `endif
-        
-        always @(posedge i_clk) begin
-            if(i_rst) begin
-                sum <= 0;
-            end else if (i_en) begin 
-                // Case 1: 양수 + 양수 = 음수 (Positive Overflow)
-                if (!sign_mul && !sign_sum && sign_res) begin
-                    sum <= {1'b0, {(2*dataWidth-1){1'b1}}}; 
-    
-                // Case 2: 음수 + 음수 = 양수 (Negative Overflow)
-                end else if (sign_mul && sign_sum && !sign_res) begin
-                    sum <= {1'b1, {(2*dataWidth-1){1'b0}}};
-    
-                // Case 3: 정상 범위
-                end else begin
-                    sum <= Comboadd ;
+                    // Case 3: 정상 범위
+                    end else begin
+                        sum <= Comboadd ;
+                    end
                 end
             end
-        end
+            
+            assign o_psum = sum;
         
-        assign o_psum = sum;
-    
-    endmodule
+        endmodule
 
     - 1️⃣ FSM & Conter 정의
 
