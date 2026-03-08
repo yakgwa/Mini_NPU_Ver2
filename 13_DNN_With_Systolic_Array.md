@@ -571,5 +571,41 @@
                 .
                 CALC_L3 / BUFFER_WR_L3 생략
 
-      - CALC_L2/CALC_L3 전이 동작       
+      - CALC_L2/CALC_L3 전이 동작
         - CALC_L1 전이 동작과 큰 차이점은 없지만, 핵심적인 차이점은 다음과 같다.
+
+                // CALC_L1:
+                raw_input_data <= i_input_pixels;  // 외부 입력
+                
+                // CALC_L2:
+                raw_input_data <= {buf_r_data[3], buf_r_data[2], buf_r_data[1], buf_r_data[0]};  // Buffer 읽기
+                
+                ------------------------------------------------------------------------
+                
+                //Buffer 읽기 데이터 패킹
+                raw_input_data[31:0] = {
+                    buf_r_data[3][7:0],  // Image 3
+                    buf_r_data[2][7:0],  // Image 2
+                    buf_r_data[1][7:0],  // Image 1
+                    buf_r_data[0][7:0]   // Image 0
+                }
+                
+                //읽기 주소
+                buf_r_addr[0] = 0*32 + k_cnt = k_cnt      // Image 0 영역
+                buf_r_addr[1] = 1*32 + k_cnt = 32 + k_cnt // Image 1 영역
+                buf_r_addr[2] = 2*32 + k_cnt = 64 + k_cnt // Image 2 영역
+                buf_r_addr[3] = 3*32 + k_cnt = 96 + k_cnt // Image 3 영역
+                
+                -------------------------------------------------------------------------
+                데이터 재사용:
+                Layer 1의 출력 (30개 뉴런)이 Layer 2의 입력
+                Unified Buffer가 중간 결과 저장
+                외부 메모리 접근 불필요 (On-chip 완료)
+
+
+
+
+
+
+
+      
