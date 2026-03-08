@@ -458,13 +458,55 @@
         4) State Transition (그렇지 않을 경우 매 사이클 k_cnt++하여 입력 시퀀스 진행)
 
                 state ← BUFFER_WR_L1 
-                
                 pe_en ← 0 
-                
                 write_seq_cnt ← 0
 
+      - BUFFER_WR_L1 전이 동작     
+        1) Buffer 쓰기 로직
+       
+                Cycle N (write_seq_cnt=0):
+                  - 대기
+                  - write_seq_cnt++
+                
+                Cycle N+1 (write_seq_cnt=1):
+                  - in_idx = (0,0) → PE[0][0] 선택 → AU 입력
+                  - delayed_seq_cnt = 0 (음수 방지)
+                  - wr_idx 계산 안됨
+                  - buf_wen = 0 (아직 유효 데이터 없음) 
+                
+                Cycle N+2 (write_seq_cnt=2):
+                  - in_idx = (0,1) → PE[0][1] 선택
+                  - wr_idx = (0,0) → PE[0][0] 결과 쓰기
+                  - buf_w_addr = (0 × 32) + (0×4+0) = 0
+                  - buf_w_data = act_out_val (Cycle N+1의 AU 출력)
+                  - buf_wen = 1
+                
+                ...
+                
+                Cycle N+17 (write_seq_cnt=17):
+                  - in_idx = overflow (사용 안됨)
+                  - wr_idx = (3,3) → PE[3][3] 결과 쓰기
+                  - buf_w_addr = (3 × 32) + (0×4+3) = 99
+                  - buf_wen = 1
+                
+                주소 계산 : 
+                buf_w_addr = (wr_img_idx × 32) + wr_global_neuron_idx
+                wr_global_neuron_idx = group_cnt * 4 + wr_neu_idx
+                주소 게산 예시 :
+                wr_idx=(0,0): addr = 0*32 + 0*4+0 = 0   (Image 0, Neuron 0)
+                wr_idx=(0,1): addr = 0*32 + 0*4+1 = 1   (Image 0, Neuron 1)
+                wr_idx=(1,0): addr = 1*32 + 0*4+0 = 32  (Image 1, Neuron 0)
+                wr_idx=(3,3): addr = 3*32 + 0*4+3 = 99  (Image 3, Neuron 3)
 
+        2) 다음 동작 결정
 
+                cur_neuron_total = 30 (Layer 1)
+                
+                Group 0: (0+1)*4 = 4  < 30  → 다음 그룹
+                Group 1: (1+1)*4 = 8  < 30  → 다음 그룹
+                ...
+                Group 6: (6+1)*4 = 28 < 30  → 다음 그룹
+                Group 7: (7+1)*4 = 32 >= 30 → Layer 완료, CALC_L2로 전이
 
 
 
