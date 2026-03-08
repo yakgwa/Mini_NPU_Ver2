@@ -931,12 +931,77 @@
     - img_mem_X[0] 등 앞부분 픽셀 값을 찍어보며 이미지가 로드 여부 확인
     - img_mem_X[784] 위치에 저장된 정답 라벨 확인
 
+                // ======================================================================================
+                // Task: Print Result with PASS/FAIL
+                // ======================================================================================
+                task check_result;
+                    input [31:0] result;
+                    input [7:0]  expected;
+                    input integer img_id;
+                    begin
+                        total_count = total_count + 1;
+                        $fdisplay(log_fd, "  [Image %0d] Result=%0d | Expected=%0d | %s",
+                            img_id, result, expected,
+                            (result == expected) ? ">>> PASS <<<" : ">>> FAIL <<<");
+                        $display("[TB] Image %0d: Result=%0d Expected=%0d %s",
+                            img_id, result, expected,
+                            (result == expected) ? "PASS" : "FAIL");
+                        if (result == expected) pass_count = pass_count + 1;
+                    end
+                endtask
 
+    - HW의 result와 expected를 대조함으로써 PASS/FAIL을 체크
+    - pass_count를 누적하여 추후 test_data_xxx.txt의 sample 수를 늘릴 때, Accuracy 체크
 
+- 3️⃣ Always Block : Monitor + Driver
 
-
-
-
+            // ======================================================================================
+            // Per-Cycle Monitor (always block)
+            // ======================================================================================
+            always @(posedge clk) begin
+                if (rst_n) begin
+                    cycle_cnt <= cycle_cnt + 1;
+        
+                    // 1. State Transition Detection
+                    if (dut.state !== prev_state) begin
+                        $fdisplay(log_fd, "");
+                        $fdisplay(log_fd, "############ STATE CHANGE: %0s --> %0s (Cycle %0d, Time %0t) ############",
+                            get_state_name(prev_state), get_state_name(dut.state), cycle_cnt, $time);
+                        $display("[TB] State: %0s -> %0s (Cycle %0d)",
+                            get_state_name(prev_state), get_state_name(dut.state), cycle_cnt);
+                    end
+                    prev_state <= dut.state;
+        
+                    // 2.1. CALC States: Full Matrix Visualization
+                    if (dut.state == 1 || dut.state == 3 || dut.state == 5) begin
+                        log_matrix_view();
+                    end
+        
+                    // 2.2. BUFFER_WR States: Bias+Activation Logging
+                    if (dut.state == 2 || dut.state == 4 || dut.state == 6) begin
+                        log_buffer_write();
+                    end
+        
+                    // 3. INPUT_PIXEL Feeding (Layer 1 only)
+                    // TB에서 매 사이클 i_input_pixels를 갱신
+                    if (dut.state == 1) begin
+                        if (dut.k_cnt < 784) begin
+                            input_pixels <= {img_mem_3[dut.k_cnt], img_mem_2[dut.k_cnt],
+                                             img_mem_1[dut.k_cnt], img_mem_0[dut.k_cnt]};
+                            input_valid <= 1;
+                        end else begin
+                            input_pixels <= 0;
+                            input_valid <= 0;
+                        end
+                    end else begin
+                        input_valid <= 0;
+                    end
+        
+                    if (cycle_cnt % 100 == 0) begin
+                        $fflush(log_fd);
+                    end
+                end
+            end
 
 
 
