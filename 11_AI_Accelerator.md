@@ -565,13 +565,25 @@
               end
             endmodule
 
+    - 5️⃣ Main 
+      - unpacked ↔ packed mapping 함수 2개
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_37.png" width="400"/>
 
+log 값
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_38.png" width="400"/>
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_39.png" width="400"/>
 
+Timing Diagram Full View
 
+<div align="left">
 
-      - pe_systolic_cell은 기존에 최초 제시된 mac_pe와는 다르게, 연산기(mac_pe) + 입력 전달 목적 pipe register + next cell interconnect까지 포함된 Systolic Array용 PE cell이라고 요약할 수 있다. 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_40.png" width="400"/>
+
+<div align="left">
