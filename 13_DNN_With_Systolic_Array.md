@@ -188,3 +188,118 @@
                     assign bias_unpacked[j] = b_bank_out[(j+1)*2*dataWidth-1 : j*2*dataWidth];
                 end
             endgenerate
+
+    - 2️⃣ DUT Instantiation
+ 
+            // ======================================================================================
+            // 5. Module Instantiations
+            // ======================================================================================
+        
+            // ----- Weight Bank -----
+            // Layer/Group/Address에 따라 4개 뉴런의 가중치를 동시 출력
+            Weight_Bank #(
+                .dataWidth(dataWidth),
+                .ARRAY_ROW(ARRAY_ROW),
+                .ARRAY_COL(ARRAY_COL)
+            ) wb (
+                .i_clk(i_clk),
+                .i_layer_idx(cur_layer_num),
+                .i_neuron_group(group_cnt),
+                .i_w_addr(k_cnt),
+                .w_out_packed(w_bank_out)
+            );
+        
+            // ----- Bias Bank -----
+            // Layer/Group에 따라 4개 뉴런의 Bias를 동시 출력
+            Bias_Bank #(
+                .dataWidth(dataWidth),
+                .ARRAY_ROW(ARRAY_ROW),
+                .ARRAY_COL(ARRAY_COL)
+            ) bb (
+                .i_clk(i_clk),
+                .i_layer_idx(cur_layer_num),
+                .i_neuron_group(group_cnt),
+                .b_out_packed(b_bank_out)
+            );
+        
+            // ----- Data Skewing -----
+            // Raw 데이터에 대각선 Wavefront 지연을 적용한 후 Systolic Array로 전달
+            Data_Skewing #(
+                .dataWidth(dataWidth),
+                .ARRAY_ROW(ARRAY_ROW),
+                .ARRAY_COL(ARRAY_COL)
+            ) ds (
+                .i_clk(i_clk),
+                .i_rst(pe_rst),               // PE 리셋과 동기화 (새 그룹 시작 시 SR 초기화)
+                .i_en(pe_en),                 // PE enable과 동기화
+                .i_row_data(sys_row_in),      // MUX 출력 (Raw, zero-padded)
+                .i_col_data(sys_col_in),      // MUX 출력 (Raw, zero-padded)
+                .o_row_data(skewed_row_data), // Skewed → SA row edge
+                .o_col_data(skewed_col_data)  // Skewed → SA col edge
+            );
+        
+            // ----- Systolic Array -----
+            Systolic_Array #(
+                .dataWidth(dataWidth),
+                .ARRAY_ROW(ARRAY_ROW),
+                .ARRAY_COL(ARRAY_COL)
+            ) sa (
+                .i_clk(i_clk),
+                .i_rst(pe_rst),
+                .i_en(pe_en),
+                .i_row_data(skewed_row_data),   // Raw → Skewed
+                .i_col_data(skewed_col_data),   // Raw → Skewed
+                .o_array_out(array_out_packed)
+                `ifdef DEBUG
+                , .o_debug_pe00_mul(debug_mul_00)
+                `endif
+            );
+        
+            // ----- Activation Unit -----
+            Activation_Unit #(
+                .dataWidth(dataWidth)
+            ) au (
+                .i_clk(i_clk),
+                .i_psum(au_in_psum),
+                .i_bias(au_in_bias),
+                .i_actsel(cur_act_sel),
+                .o_out(act_out_val)
+            );
+        
+            // ----- Unified Buffer -----
+            Unified_Buffer #(
+                .dataWidth(dataWidth)
+            ) ub (
+                .i_clk(i_clk),
+                .i_wen(buf_wen),
+                .i_w_addr(buf_w_addr),
+                .i_w_data(buf_w_data),
+                .i_r_addr_0(buf_r_addr[0]),
+                .i_r_addr_1(buf_r_addr[1]),
+                .i_r_addr_2(buf_r_addr[2]),
+                .i_r_addr_3(buf_r_addr[3]),
+                .o_r_data_0(buf_r_data[0]),
+                .o_r_data_1(buf_r_data[1]),
+                .o_r_data_2(buf_r_data[2]),
+                .o_r_data_3(buf_r_data[3])
+            );
+        
+            // ----- MaxFinder (4 instances, 각 이미지별) -----
+            genvar img;
+            generate
+                for (img = 0; img < ARRAY_ROW; img = img + 1) begin : MAX_FINDER_GEN
+                    maxFinder #(
+                        .numInput(10),
+                        .inputWidth(dataWidth)
+                    ) mf (
+                        .i_clk(i_clk),
+                        .i_data(mf_in_data[img]),
+                        .i_valid(mf_valid_pulse),
+                        .o_data(mf_out[img]),
+                        .o_data_valid(mf_out_valid[img])
+                    );
+                end
+            endgenerate
+
+
+
