@@ -152,11 +152,57 @@
 
 ### 분석 : 구체적인 타이밍 검증1
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_46.png" width="400"/>
 
+각 열 별로 왼쪽은 test_data_0000~0003.txt value / 오른쪽은 w_1_0~3.mif value에 해당한다
 
+<div align="left">
 
+- 1️⃣ 검증 기준점 설정 : test_data_0000~0003.txt과 w_1_0~3.mif의 0-indexed 기준 69번째 데이터를 검증 포인트로 잡는다. 앞서 분석한 4 Cycle(초기화+메모리 읽기+레지스터링)을 고려할 때, 해당 데이터는 Cycle 73부터 관측되어야 한다.
+- 2️⃣ Raw Data : 만약, Weight가 읽혀 나온 직후 Raw Data는 Skewing 없이 모든 행이 동시에 출력되어야 한다. 따라서 위 그림에서 69번째 줄부터의 내용이 Cycle 73부터 순차적으로 찍혀야 한다.
+    - Cycle 73: 0, 1, 0, 0 (69번째 데이터)
+    - Cycle 74: -2, 0, 0, 0 (70번째 데이터)
+    - Cycle 75: -2, -1, 0, 0 (71번째 데이터)
+    - Cycle 76: 0, 0, 0, -1 (72번째 데이터)
+    - Cycle 77: 0, 0, 0, -1 (73번째 데이터)
+- 3️⃣ Skewed Data : Data Skewing 모듈을 통과한 각 Row마다 인덱스만큼의 지연(Row 0: 0 delay, Row 1: 1 delay...)이 반영된 형태로 입력되어야 한다. 이를 Cycle 73 기준으로 재배열하면 다음과 같다.
+    - Cycle 73: 0, 0, 0, -1
+    - Cycle 74: -2, 1, 0, -1
+    - Cycle 75: -2, 0, 0, 0
+    - Cycle 76: 0, -1, 0, 0
+    - Cycle 77: 0, 0, 0, 0
 
-
+            ====== [Cycle:   73] State: CALC_L1 | k_cnt:  71 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   1  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=  -1
+            
+            ====== [Cycle:   74] State: CALC_L1 | k_cnt:  72 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=  -2  C1=   0  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=  -2  C1=   1  C2=   0  C3=  -1
+            
+            ====== [Cycle:   75] State: CALC_L1 | k_cnt:  73 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=  -2  C1=  -1  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=  -2  C1=   0  C2=   0  C3=   0
+            
+            ====== [Cycle:   76] State: CALC_L1 | k_cnt:  74 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=  -1
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=  -1  C2=   0  C3=   0
 
 
 
