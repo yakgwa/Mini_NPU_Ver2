@@ -37,66 +37,66 @@
 
     - 1️⃣ Parameter & Port 정의
 
-        //==========================================================
-        //1. FSM(based Moore Machine) & Counter
-        //==========================================================
-        reg [7:0] cnt;        //Cycle Time for 'RUN'
-        reg [1:0] state;      //state register
-        reg [1:0] next_state; //next-state register
-        wire array_en;        //array calc enable signal
-        wire array_clr;       //inner array acc register reset
+          //==========================================================
+          //1. FSM(based Moore Machine) & Counter
+          //==========================================================
+          reg [7:0] cnt;        //Cycle Time for 'RUN'
+          reg [1:0] state;      //state register
+          reg [1:0] next_state; //next-state register
+          wire array_en;        //array calc enable signal
+          wire array_clr;       //inner array acc register reset
     
-    //==========================================================
-    //next_state : comb logic
-    //==========================================================
-        always @(*) begin
-            next_state = state; // 기본값 (Latch 방지)
+      //==========================================================
+      //next_state : comb logic
+      //==========================================================
+          always @(*) begin
+              next_state = state; // 기본값 (Latch 방지)
         
-            case (state)
-                IDLE : if(i_start) next_state = RUN;
-                RUN  : if(cnt >= INJ_CYCLES) next_state = DONE;
-                DONE : if(!i_start) next_state = IDLE;
-                default: next_state = IDLE;
-    /*
-    IDLE→RUN: i_start 레벨이 1이면 시작.
-    RUN→DONE: cnt가 충분히 커지면 done.
-    DONE→IDLE: start가 0으로 내려가야(버튼 떼기처럼) 다시 대기.
-    따라서 이 FSM은 start를 “펄스”가 아니라 “레벨”로 사용하고 있으므로,
-    start를 계속 1로 유지하면 DONE에서 유지되고, 0으로 내려야 IDLE로 복귀.
-    */
-            endcase
-        end
+              case (state)
+                  IDLE : if(i_start) next_state = RUN;
+                  RUN  : if(cnt >= INJ_CYCLES) next_state = DONE;
+                  DONE : if(!i_start) next_state = IDLE;
+                  default: next_state = IDLE;
+      /*
+      IDLE→RUN: i_start 레벨이 1이면 시작.
+      RUN→DONE: cnt가 충분히 커지면 done.
+      DONE→IDLE: start가 0으로 내려가야(버튼 떼기처럼) 다시 대기.
+      따라서 이 FSM은 start를 “펄스”가 아니라 “레벨”로 사용하고 있으므로,
+      start를 계속 1로 유지하면 DONE에서 유지되고, 0으로 내려야 IDLE로 복귀.
+      */
+              endcase
+          end
     
-    //==========================================================
-    //state, cnt : seq logic
-    //==========================================================
-        always @(posedge clk or negedge rst_n) begin
-            if(!rst_n) begin
-                state <= IDLE;
-                cnt <= 0;
-            end else begin
-                state <= next_state;
-                if (state == RUN) cnt <= cnt + 1;
-                else cnt <= 0;
-            end
-    /*
-    state <= next_state와 cnt <= ...는 같은 always 블록의 nonblocking이므로,
-    if (state == RUN)은 이전 사이클의 state 기준으로 판단됨.
-    즉, RUN으로 “진입하는 사이클”에서 cnt가 증가할지 여부는 1사이클 차이가 날 수 있음
-    */
-        end
+      //==========================================================
+      //state, cnt : seq logic
+      //==========================================================
+          always @(posedge clk or negedge rst_n) begin
+              if(!rst_n) begin
+                  state <= IDLE;
+                  cnt <= 0;
+              end else begin
+                  state <= next_state;
+                  if (state == RUN) cnt <= cnt + 1;
+                  else cnt <= 0;
+              end
+      /*
+      state <= next_state와 cnt <= ...는 같은 always 블록의 nonblocking이므로,
+      if (state == RUN)은 이전 사이클의 state 기준으로 판단됨.
+      즉, RUN으로 “진입하는 사이클”에서 cnt가 증가할지 여부는 1사이클 차이가 날 수 있음
+      */
+          end
     
-    //==========================================================
-    //output, control signal
-    //==========================================================
-        //Output Assignments
-        assign o_busy = (state == RUN);
-        assign o_done = (state == DONE);
-        //Array Control Signals
-        assign array_en = (state == RUN);
-        // IDLE 상태에서 start가 들어오는 순간 Clear 수행 (Accumulator 초기화)
-        // 이렇게 하면 PE 내부의 acc_sum이 0으로 리셋되고 새 연산을 시작합니다.
-        assign array_clr = (state == IDLE) && i_start;
+      //==========================================================
+      //output, control signal
+      //==========================================================
+          //Output Assignments
+          assign o_busy = (state == RUN);
+          assign o_done = (state == DONE);
+          //Array Control Signals
+          assign array_en = (state == RUN);
+          // IDLE 상태에서 start가 들어오는 순간 Clear 수행 (Accumulator 초기화)
+          // 이렇게 하면 PE 내부의 acc_sum이 0으로 리셋되고 새 연산을 시작합니다.
+          assign array_clr = (state == IDLE) && i_start;
 
 
 
