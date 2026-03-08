@@ -824,6 +824,7 @@
           Img2(R2) --> [      0] [      0] [      0] [      0]
           Img3(R3) --> [      0] [      0] [      0] [      0]
 
+
       - 🔴앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
 
     - 🚀 [개선 방안] FSM 일부 수정
@@ -843,7 +844,38 @@
                                         pre_calc_cnt <= 0; //변경사항 추가 추가2
                                     end else begin
                                         ..동일
-
+        
+                            ====== [Cycle: 6514] State: CALC_L2 | k_cnt:   0 | Group: 0 | pe_en:0 | pe_rst:1 ======
+                              [Raw Data (MUX Output)]
+                                Row: R0=  72  R1= 127  R2= 127  R3= 100
+                                Col: C0=  -9  C1=   4  C2=   1  C3=  -7
+                              [Skewed Data (Array Edge)]
+                                Row: R0=  72  R1=   0  R2=   0  R3=   0
+                                Col: C0=  -9  C1=   0  C2=   0  C3=   0
+                            
+                            ====== [Cycle: 6515] State: CALC_L2 | k_cnt:   1 | Group: 0 | pe_en:1 | pe_rst:0 ======
+                              [Raw Data (MUX Output)]
+                                Row: R0=  72  R1= 127  R2= 127  R3= 100
+                                Col: C0=  -9  C1=   4  C2=   1  C3=  -7
+                              [Skewed Data (Array Edge)]
+                                Row: R0=  72  R1=   0  R2=   0  R3=   0
+                                Col: C0=  -9  C1=   0  C2=   0  C3=   0
+                            
+                            ====== [Cycle: 6516] State: CALC_L2 | k_cnt:   2 | Group: 0 | pe_en:1 | pe_rst:0 ======
+                              [Raw Data (MUX Output)]
+                                Row: R0=  17  R1=  51  R2=  66  R3=   3
+                                Col: C0=  -9  C1=   4  C2=   1  C3=  -7
+                              [Skewed Data (Array Edge)]
+                                Row: R0=  17  R1= 127  R2=   0  R3=   0
+                                Col: C0=  -9  C1=   4  C2=   0  C3=   0
+                            
+                            ====== [Cycle: 6517] State: CALC_L2 | k_cnt:   3 | Group: 0 | pe_en:1 | pe_rst:0 ======
+                              [Raw Data (MUX Output)]
+                                Row: R0=  95  R1=   0  R2=  28  R3=   0
+                                Col: C0= -17  C1=  -9  C2= -16  C3=  -1
+                              [Skewed Data (Array Edge)]
+                                Row: R0=  95  R1=  51  R2= 127  R3=   0
+                                Col: C0= -17  C1=   4  C2=   1  C3=   0
 
 
 
