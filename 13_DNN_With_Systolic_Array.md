@@ -828,7 +828,50 @@
                 $fdisplay(log_fd, "  R3=%4d  ---------->  [PE30]  [PE31]  [PE32]  [PE33]",
                     $signed(dut.skewed_row_data[4*dataWidth-1 -: dataWidth]));
 
+    - skewing이 적용된 데이터를 실제 적용함으로써 위쪽(C0~C3)에서 가중치가 내려오고, 왼쪽(R0~R3)에서 입력 데이터가 들어가는 모습을 시각적으로 체크한다. 이를 통해 어떤 값이 어느 PE로 들어가서 만나는지 직관적으로 파악하여 디버깅 속도를 높이도록 한다.
 
+                // --- PE Accumulator Matrix ---
+                $fdisplay(log_fd, "  [PE Accumulator Matrix] (N = Neuron %0d~%0d)",
+                    dut.group_cnt*4, dut.group_cnt*4+3);
+                $fdisplay(log_fd, "                  N%-2d        N%-2d        N%-2d        N%-2d",
+                    dut.group_cnt*4, dut.group_cnt*4+1, dut.group_cnt*4+2, dut.group_cnt*4+3);
+                $fdisplay(log_fd, "  Img0(R0) --> [%7d] [%7d] [%7d] [%7d]",
+                    $signed(dut.pe_res_unpacked[0][0]),
+                    $signed(dut.pe_res_unpacked[0][1]),
+                    $signed(dut.pe_res_unpacked[0][2]),
+                    $signed(dut.pe_res_unpacked[0][3]));
+                $fdisplay(log_fd, "  Img1(R1) --> [%7d] [%7d] [%7d] [%7d]",
+                    $signed(dut.pe_res_unpacked[1][0]),
+                    $signed(dut.pe_res_unpacked[1][1]),
+                    $signed(dut.pe_res_unpacked[1][2]),
+                    $signed(dut.pe_res_unpacked[1][3]));
+                $fdisplay(log_fd, "  Img2(R2) --> [%7d] [%7d] [%7d] [%7d]",
+                    $signed(dut.pe_res_unpacked[2][0]),
+                    $signed(dut.pe_res_unpacked[2][1]),
+                    $signed(dut.pe_res_unpacked[2][2]),
+                    $signed(dut.pe_res_unpacked[2][3]));
+                $fdisplay(log_fd, "  Img3(R3) --> [%7d] [%7d] [%7d] [%7d]",
+                    $signed(dut.pe_res_unpacked[3][0]),
+                    $signed(dut.pe_res_unpacked[3][1]),
+                    $signed(dut.pe_res_unpacked[3][2]),
+                    $signed(dut.pe_res_unpacked[3][3]));
+            end
+        endtask
 
-
+    - 각 PE 내부의 acc register valude(dut.pe_res_unpacked[row][col]) 즉, Partial Sum을 추출하여 Reference Model과 일치하는지 비교하여 연산의 정확성을 검증하도록 한다.
+ 
+                // ======================================================================================
+                // Task: Log BUFFER_WR activity (Bias + Activation)
+                // ======================================================================================
+                task log_buffer_write;
+                    begin
+                        if (dut.buf_wen) begin
+                            $fdisplay(log_fd, "  [BUF_WR] Cycle:%5d | addr=%3d | data=%4d | act_out=%4d | AU_psum=%6d | AU_bias=%6d | seq=%2d",
+                                cycle_cnt, dut.buf_w_addr, $signed(dut.buf_w_data),
+                                $signed(dut.act_out_val),
+                                $signed(dut.au_in_psum), $signed(dut.au_in_bias),
+                                dut.write_seq_cnt);
+                        end
+                    end
+                endtask
 
