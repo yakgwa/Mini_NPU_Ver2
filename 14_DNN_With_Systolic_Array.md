@@ -824,9 +824,7 @@
           Img2(R2) --> [      0] [      0] [      0] [      0]
           Img3(R3) --> [      0] [      0] [      0] [      0]
 
-
-
-      - 앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
+      👉 앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
 
     - 🚀 [개선 방안] FSM 일부 수정
       - 이는 기존 FSM을 다음과 같이 일부 수정함으로써 해결할 수 있다. 구체적으로는 BUFFER_WR_L1,L2 역시 바로 CALC_L2,L3로 넘어가지 않고, PRE_CALC_L2,L3로 넘어감으로써 Memory 갱신 시간을 확보한다.
@@ -935,14 +933,35 @@
                 N[10-14]:    1   115     2     4    59
                 N[15-19]:  100    29    22    34    63
 
+      - 데이터 정합성(Alignment) 및 연산 로직은 정상이나, Write Address 스케줄링에 문제가 있는 것을 추가적으로 확인하였다. Layer 2 결과가 아직 필요한 Layer 1 연산 결과 영역을 Overwrite하고 있어, 데이터 오염으로 인한 연산 불가 현상이 발생 중인 것으로 파악된다.
 
+    - 🚀 [개선 방안] Ping-Pong Buffering
+      - Memory Overwrite 현상을 해결하기 위해 Buffer를 Bank 0 (0~127), Bank(128 ~255)로 분할하여 read/write 영역을 분리하도록 한다. 블록 다이어그램으로 설명한 개선 전략은 아래와 같다.
 
+            ┌─────────────────────────────────────────────────────┐
+            │ Bank 0 (addr 0~127)                                 │
+            │  - Layer 1 출력 저장                                │
+            │  - Layer 2 입력으로 사용                            │
+            │  - Layer 3 출력 저장 (Layer 1 재사용)               │
+            ├─────────────────────────────────────────────────────┤
+            │ Bank 1 (addr 128~255)                               │
+            │  - Layer 2 출력 저장                                │
+            │  - Layer 3 입력으로 사용                            │
+            └─────────────────────────────────────────────────────┘
 
+      - 구체적인 코드 수정 포인트는 다음과 같다.
 
-
-
-
-
-
+            // 1. 새로운 신호 추가 (Ping-Pong Buffering Offset)
+            reg [7:0] buf_base_offset_rd;  // 읽기용 Base Address Offset
+            reg [7:0] buf_base_offset_wr;  // 쓰기용 Base Address Offset
+            
+            // 2. Read Address 수정
+            assign buf_r_addr[0] = buf_base_offset_rd + (0 * 32) + k_cnt;
+            assign buf_r_addr[1] = buf_base_offset_rd + (1 * 32) + k_cnt;
+            assign buf_r_addr[2] = buf_base_offset_rd + (2 * 32) + k_cnt;
+            assign buf_r_addr[3] = buf_base_offset_rd + (3 * 32) + k_cnt;
+            
+            // 3. Write Address 수정
+            buf_w_addr <= buf_base_offset_wr + (wr_img_idx * 32) + wr_global_neuron_idx;
 
 
