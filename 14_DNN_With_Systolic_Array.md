@@ -521,7 +521,102 @@
                     o_wout <= mem[i_radd];  // ← Non-blocking! 다음 클럭에 출력
                 end
             end
+        
+      - Cycle 813 → 814 (PRE_CALC_L1 진입)
+
+            // Cycle 813 종료 시점
+            group_cnt <= 1;  // Non-blocking
+            k_cnt <= 0;      // Non-blocking
+            // 레지스터 값
+            group_cnt = 1    // ✅ 갱신 완료
+            k_cnt = 0        // ✅ 갱신 완료
+            
+            // Weight_Bank (조합 로직 - 즉시 계산)
+            idx = 1*4 + k = 4, 5, 6, 7  // ✅ 정확
+            
+            // Weight_Memory에 전달
+            i_radd = k_cnt = 0  // ✅ 정확
+            
+            // ❌ 하지만! Weight_Memory는 동기식
+            // Cycle 814 Rising Edge: 주소 0 받음
+            // Cycle 814 동안: 이전 주소(793)의 데이터 출력
+            // Cycle 815 Rising Edge: 주소 0의 데이터 출력
+            
+            // PRE_CALC_L1에서
+            raw_weight_data <= w_bank_out;  
+            // ← w_bank_out은 아직 주소 0의 데이터가 아님!
+
+      - Cycle 815 (Group 1의 CALC_L1 진입) :
+     
+            // raw_weight_data = Cycle 814에서 할당된 값
+            //                 = Cycle 814의 w_bank_out
+            //                 = Weight_Memory가 Cycle 814에 출력한 값
+            //                 = 이전 주소(793)의 데이터 ❌
+            
+            // sys_col_in (조합 로직)
+            sys_col_in = raw_weight_data  // ← 부적절한 값!
+            Cycle 816
+            
+            // CALC_L1에서 (Cycle 815 실행)
+            raw_weight_data <= w_bank_out;
+            // w_bank_out = Cycle 815의 Weight_Memory 출력
+            //            = 주소 0의 데이터 ✅ 정상!
+            
+            // Cycle 816에서 비로소
+            raw_weight_data = w_1_4[0] ~ w_1_7[0]  ✅
+            
+            최종적으로 2 Cycle의 prefetch 필요!
+            주소 변경 → [1 cycle] → 메모리 출력 → [1 cycle] → 레지스터 저장
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_49.png" width="400"/>
+
+<div align="left">
+
+    - FSM 코드 전면 수정
+
+                        // ============================================================
+                        // [BUFFER_WR_L1] Layer 1 결과 저장
+                        // ============================================================
+                        BUFFER_WR_L1: begin
+                            if (write_seq_cnt > 0 && write_seq_cnt <= 16+1) begin
+                                if (wr_global_neuron_idx < cur_neuron_total) begin
+                                    ..동일
+                                end
+                            end         
+                            if (write_seq_cnt == 16+1) begin
+                                if ((group_cnt + 1) * 4 >= cur_neuron_total) begin                    
+                                    ..동일
+                                end else begin
+                                    // 다음 뉴런 그룹 처리
+                                    state <= PRE_CALC_L1; //변경사항1
+                                    ..동일
+                                    pre_calc_cnt <= 0;    //변경사항2
+                                end
+                                ..동일
+        
+                        // ============================================================
+                        // [PRE_CALC_L1] 
+                        // ============================================================
+                        PRE_CALC_L1 : begin
+                            pe_rst <= 1; //리셋 유지
+                            pe_en  <= 0; //PE 비활성화
+                        
+                            //Data Pre-Fetch
+                            raw_input_data <= i_input_pixels;
+                            raw_weight_data <= w_bank_out;
+                            
+                            if(pre_calc_cnt == 0) begin
+                                //1st cycle : address 안정화
+                                pre_calc_cnt <= 1;
+                            end else begin
+                                //2nd cycle : Memory Data Setting Done
+                                state <= CALC_L1;
+                                pre_calc_cnt <=0;
+                            end
+                        end
+        (나머지 CALC_L2,L3 / PRE_CALC_L2,L3도 동일한 방식)
 
 
 
 
+        
