@@ -326,11 +326,16 @@
       1) Pipelining Delay: pe_systolic_cell.v 내부의 a_reg를 거치며 발생하는 1 Cycle 지연.
       2) Data Skew: 각 행(Row)마다 데이터가 순차적으로 밀려서 도달하는 Skew Delay. 설정된 종료 시점(Cycle 791)은 Corner를 커버하기에 부족하므로 종료 타이밍을 재설계할 필요가 있다.
 
+    - 🚀 [개선 방안] Pipelining 및 Skew Data를 고려한 k_cnt limit 최적화
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_48.png" width="400"/>
 
+가장 마지막 값이 입력되는 시점은 790 Cycle
 
+<div align="left">
 
-
+      - 최종 데이터 도달 및 연산 종료 시점 분석 결과, Row/Col 3의 마지막 값이 PE에 도달하는 시점은 Cycle 790으로 확인되었다. MAC 연산까지 고려하면 각 Col별 종료 시점은 다음과 같이 순차적으로 지연된다.
+        - Col 0: Cycle 792
 
 
 
