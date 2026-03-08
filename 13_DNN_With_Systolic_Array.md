@@ -887,6 +887,8 @@
                 6. $signed(dut.au_in_bias) (Raw Input 2): 메모리나 레지스터에서 가져온 Bias
                 7. dut.write_seq_cnt: 한 번에 여러 데이터를 쓸 때(Sequential Write), 
                                       현재 몇 번째 데이터를 쓰고 있는지 나타내는 카운터
+ 
+---
 
                 // ======================================================================================
                 // Task: Verify MIF Loading
