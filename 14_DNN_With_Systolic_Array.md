@@ -877,13 +877,62 @@
                                 Row: R0=  95  R1=  51  R2= 127  R3=   0
                                 Col: C0= -17  C1=   4  C2=   1  C3=   0
 
+      - Unknown 현상은 해결하였으나, Skew Data의 C0가 1 Cycle 더 추가되어 들어감으로써 ROW/COL 데이터의 불일치성을 추가로 관찰하였다.
 
+    - 🚀 [개선 방안] ROW Data 1 Cycle 지연 목적 레지스터 삽입
+      - 다음과 같은 지연 목적 레지스터를 추가로 삽입함으로써 ROW Data를 1 Cycle 늦춤으로써 ROW/COL 데이터의 정합성을 맞췄다.
 
+                reg [ARRAY_ROW*dataWidth-1:0] raw_input_data_d1;
+                always @(posedge i_clk) begin
+                    if (!i_rst_n) raw_input_data_d1 <= 0;
+                    else raw_input_data_d1 <= raw_input_data;
+                end
+            
+                assign sys_row_in = 
+                // Layer 1: 기존대로 (지연 없음)
+                ((cur_layer_num == 1) && (k_cnt < cur_input_len + 2)) ? raw_input_data :
+                // Layer 2, 3: 1 Cycle 지연된 데이터 사용 
+                (((cur_layer_num == 2) || (cur_layer_num == 3)) && (k_cnt < cur_input_len + 2)) ? raw_input_data_d1 :
+                // Default: 0 Padding
+                {ARRAY_ROW*dataWidth{1'b0}};    
+                            
+                assign sys_col_in = ( ((cur_layer_num == 1) && (k_cnt < cur_input_len + 2)) || 
+                                      (((cur_layer_num == 2) || (cur_layer_num == 3)) && (k_cnt < cur_input_len + 2)) )
+                                    ? raw_weight_data : {ARRAY_COL*dataWidth{1'b0}};
 
+            ############ STATE CHANGE:  --> BUFFER_WR_L2 (Cycle 6554, Time 65645000) ############
+              [BUF_WR] Cycle: 6556 | addr=  0 | data= 118 | act_out= 122 | AU_psum=  4169 | AU_bias=  -256 | seq= 2
+              [BUF_WR] Cycle: 6557 | addr=  1 | data= 122 | act_out= 111 | AU_psum= -5385 | AU_bias=  -768 | seq= 3
+              [BUF_WR] Cycle: 6558 | addr=  2 | data= 111 | act_out=   5 | AU_psum= -4885 | AU_bias= -1792 | seq= 4
+              [BUF_WR] Cycle: 6559 | addr=  3 | data=   5 | act_out=   4 | AU_psum= -5960 | AU_bias=  1024 | seq= 5
+              [BUF_WR] Cycle: 6560 | addr= 32 | data=   4 | act_out=  10 | AU_psum= -5107 | AU_bias=  -256 | seq= 6
+              [BUF_WR] Cycle: 6561 | addr= 33 | data=  10 | act_out=   8 | AU_psum=  5514 | AU_bias=  -768 | seq= 7
+              [BUF_WR] Cycle: 6562 | addr= 34 | data=   8 | act_out= 116 | AU_psum= -3375 | AU_bias= -1792 | seq= 8
+              [BUF_WR] Cycle: 6563 | addr= 35 | data= 116 | act_out=   9 | AU_psum= -4244 | AU_bias=  1024 | seq= 9
+              [BUF_WR] Cycle: 6564 | addr= 64 | data=   9 | act_out=  21 | AU_psum= -2060 | AU_bias=  -256 | seq=10
+              [BUF_WR] Cycle: 6565 | addr= 65 | data=  21 | act_out=  30 | AU_psum= -2071 | AU_bias=  -768 | seq=11
+              [BUF_WR] Cycle: 6566 | addr= 66 | data=  30 | act_out=  25 | AU_psum=  9021 | AU_bias= -1792 | seq=12
+              [BUF_WR] Cycle: 6567 | addr= 67 | data=  25 | act_out= 124 | AU_psum=   762 | AU_bias=  1024 | seq=13
+              [BUF_WR] Cycle: 6568 | addr= 96 | data= 124 | act_out=  89 | AU_psum=  2992 | AU_bias=  -256 | seq=14
+              [BUF_WR] Cycle: 6569 | addr= 97 | data=  89 | act_out= 100 | AU_psum=  4668 | AU_bias=  -768 | seq=15
+              [BUF_WR] Cycle: 6570 | addr= 98 | data= 100 | act_out= 110 | AU_psum=  7006 | AU_bias= -1792 | seq=16
+              [BUF_WR] Cycle: 6571 | addr= 99 | data= 110 | act_out= 118 | AU_psum=  5455 | AU_bias=  1024 | seq=17
 
-
-
-
+            //전 Layer1 결과가 Golden Model 결과와 일치하는 것으로 확인됨
+            ====== [Image 0] LAYER 1 OUTPUT (Cycle: 807) ======
+                N[ 0- 4]:  118   122   111     5     7
+                N[ 5- 9]:  125     0    64   113    86
+                N[10-14]:   91   125    73     1    78
+                N[15-19]:   40   118   105     0   125
+            
+            ====== [Image 1] LAYER 1 OUTPUT (Cycle: 1735) ======
+              [DEBUG_L1] Layer 1 computation completed
+              [DEBUG_L1] Number of neurons: 30
+              [DEBUG_L1] All neuron outputs (after activation):
+                N[ 0- 4]:    4    10     8   116    91
+                N[ 5- 9]:  102    43    21    12    85
+                N[10-14]:    1   115     2     4    59
+                N[15-19]:  100    29    22    34    63
 
 
 
