@@ -101,11 +101,128 @@
 
 <div align="left">
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_7.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_67.png" width="400"/>
 
 OK 클릭 후 생성된 .bd 파일을 'set as TOP'으로 지정해야 함
 
 <div align="left">
+
+- 9️⃣ .xdc 설정 (gemini) 후 Run Implementation
+
+        ## =========================================================
+        ## 1. I/O Standard 설정 (모든 외부 핀 LVCMOS33)
+        ## =========================================================
+        
+        # 제어 신호 입력
+        set_property IOSTANDARD LVCMOS33 [get_ports i_start_inference_0]
+        set_property IOSTANDARD LVCMOS33 [get_ports i_input_valid_0]
+        
+        # 데이터 입력 (32-bit)
+        set_property IOSTANDARD LVCMOS33 [get_ports {i_input_pixels_0[*]}]
+        
+        # 출력 신호 (인터럽트 및 결과 데이터)
+        set_property IOSTANDARD LVCMOS33 [get_ports o_done_interrupt_0]
+        set_property IOSTANDARD LVCMOS33 [get_ports {o_result_class_0_0[*]}]
+        set_property IOSTANDARD LVCMOS33 [get_ports {o_result_class_1_0[*]}]
+        set_property IOSTANDARD LVCMOS33 [get_ports {o_result_class_2_0[*]}]
+        set_property IOSTANDARD LVCMOS33 [get_ports {o_result_class_3_0[*]}]
+        
+        ## =========================================================
+        ## 2. Pin Location (입력 핀 고정)
+        ## ZedBoard의 JA, JB, JC, JD 헤더 핀을 입력 데이터에 할당
+        ## =========================================================
+        
+        # JA Header (Lower 8 bits)
+        set_property PACKAGE_PIN Y9  [get_ports {i_input_pixels_0[0]}]
+        set_property PACKAGE_PIN AA9 [get_ports {i_input_pixels_0[1]}]
+        set_property PACKAGE_PIN Y10 [get_ports {i_input_pixels_0[2]}]
+        set_property PACKAGE_PIN AA11 [get_ports {i_input_pixels_0[3]}]
+        set_property PACKAGE_PIN AB11 [get_ports {i_input_pixels_0[4]}]
+        set_property PACKAGE_PIN AB10 [get_ports {i_input_pixels_0[5]}]
+        set_property PACKAGE_PIN AB9 [get_ports {i_input_pixels_0[6]}]
+        set_property PACKAGE_PIN AA8 [get_ports {i_input_pixels_0[7]}]
+        
+        # JB Header (Next 8 bits)
+        set_property PACKAGE_PIN W12 [get_ports {i_input_pixels_0[8]}]
+        set_property PACKAGE_PIN W11 [get_ports {i_input_pixels_0[9]}]
+        set_property PACKAGE_PIN V10 [get_ports {i_input_pixels_0[10]}]
+        set_property PACKAGE_PIN W8  [get_ports {i_input_pixels_0[11]}]
+        set_property PACKAGE_PIN V12 [get_ports {i_input_pixels_0[12]}]
+        set_property PACKAGE_PIN W10 [get_ports {i_input_pixels_0[13]}]
+        set_property PACKAGE_PIN V9  [get_ports {i_input_pixels_0[14]}]
+        set_property PACKAGE_PIN V8  [get_ports {i_input_pixels_0[15]}]
+        
+        # JC Header (Next 8 bits)
+        set_property PACKAGE_PIN AB6 [get_ports {i_input_pixels_0[16]}]
+        set_property PACKAGE_PIN AB7 [get_ports {i_input_pixels_0[17]}]
+        set_property PACKAGE_PIN AA4 [get_ports {i_input_pixels_0[18]}]
+        set_property PACKAGE_PIN Y4  [get_ports {i_input_pixels_0[19]}]
+        set_property PACKAGE_PIN T6  [get_ports {i_input_pixels_0[20]}]
+        set_property PACKAGE_PIN R6  [get_ports {i_input_pixels_0[21]}]
+        set_property PACKAGE_PIN U4  [get_ports {i_input_pixels_0[22]}]
+        set_property PACKAGE_PIN T4  [get_ports {i_input_pixels_0[23]}]
+        
+        # JD Header (Upper 8 bits)
+        set_property PACKAGE_PIN W7  [get_ports {i_input_pixels_0[24]}]
+        set_property PACKAGE_PIN V7  [get_ports {i_input_pixels_0[25]}]
+        set_property PACKAGE_PIN V4  [get_ports {i_input_pixels_0[26]}]
+        set_property PACKAGE_PIN V5  [get_ports {i_input_pixels_0[27]}]
+        set_property PACKAGE_PIN W5  [get_ports {i_input_pixels_0[28]}]
+        set_property PACKAGE_PIN W6  [get_ports {i_input_pixels_0[29]}]
+        set_property PACKAGE_PIN U5  [get_ports {i_input_pixels_0[30]}]
+        set_property PACKAGE_PIN U6  [get_ports {i_input_pixels_0[31]}]
+        
+        # [입력 2] 제어 신호 (보드의 스위치 SW0, SW1 사용)
+        set_property PACKAGE_PIN F22 [get_ports i_start_inference_0]
+        set_property PACKAGE_PIN G22 [get_ports i_input_valid_0]
+        
+        # [출력 1] 인터럽트 신호 (보드의 LED LD0 사용)
+        set_property PACKAGE_PIN T22 [get_ports o_done_interrupt_0]
+        
+        ## =========================================================
+        ## 3. Operating Conditions
+        ## =========================================================
+        set_operating_conditions -grade industrial
+        set_operating_conditions -process typical
+        set_switching_activity -deassert_resets
+
+- NPU_TOP.v도 동일한 방법을 적용
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_68.png" width="400"/>
+
+<div align="left">
+
+### AREA
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_69.png" width="400"/>
+
+<div align="left">
+
+- 먼저 면적(Area) 관점에서 분석을 수행한다. 위 제시된 바와 같이, 논문에서 보고된 Resource Utilization을 실제 Vivado 환경에서 직접 합성하여 추출한 결과와 비교하고자 한다. 본 실험에서는 sigmoidSize를 10으로 설정하였으므로, 논문 내에서 해당 설정에 대응하는 오른쪽 (c) 그래프의 자원 사용량 수치를 기준으로 삼는다.
+- 아래에 제시된 값은 Reference Model을 동일한 조건에서 합성하여 얻은 Resource Utilization이다. LUT, FF, BRAM, DSP 등의 자원 사용량은 논문에 제시된 수치와 완벽히 일치하지는 않으나, 이는 synthesis strategy의 세부 설정, implementation seed, constraint 적용 여부 등 측정 방식의 차이에 기인한 오차로 해석된다. 단, 전체적인 자원 사용 경향은 논문과 근접하게 나타났으며, 구조적 차이를 설명하기에 통계적으로 유의미한 비교 기준으로 활용할 수 있다고 판단한다. 따라서 직접 추출한 Reference Model의 Resource Utilization을 비교 변인으로 설정 후, 제안 구조와의 Area 차이를 분석한다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_70.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_71.png" width="400"/>
+
+Reference Model : Area
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_72.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_73.png" width="400"/>
+
+Proposed Model : Area
+
+<div align="left">
+
+
+
 
 
 
