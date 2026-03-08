@@ -350,24 +350,69 @@
             assign sys_row_in = (k_cnt < cur_input_len) ? raw_input_data : {ARRAY_ROW*dataWidth{1'b0}};
             assign sys_col_in = (k_cnt < cur_input_len) ? raw_weight_data : {ARRAY_COL*dataWidth{1'b0}};
 
+- 기존 로직은 k_cnt=784(cur_input_len)에 입력을 0으로 차단했다. 하지만 Skewing이 데이터를 지연시켜 내보내려면, 지연되는 시간만큼 입력 데이터가 유효하게 유지되어야 한다는 점을 고려해야 한다.​
 
+            assign sys_row_in = (k_cnt < cur_input_len + 2) ? raw_input_data : {ARRAY_ROW*dataWidth{1'b0}};
+            assign sys_col_in = (k_cnt < cur_input_len + 2) ? raw_weight_data : {ARRAY_COL*dataWidth{1'b0}};
 
+- 입력 유효 구간(Valid Window) 확장 Skewing 모듈이 지연된 데이터를 충분히 확보할 수 있도록, 입력 할당문의 조건을 +2 사이클만큼 확장하여 수정하였다.(아래의 7과 31은 임의로 .txt, .mif의 마지막 데이터를 변경하여 검증을 수행한 것이다. 검증 결과, 문제가 개선된 것을 확인할 수 있다.)
 
+        ====== [Cycle:  790] State: CALC_L1 | k_cnt: 788 | Group: 0 | pe_en:1 | pe_rst:0 ======
+          [Skewed Data (Array Edge)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   7
+            Col: C0=   0  C1=   0  C2=   0  C3=  31
+          [PE Accumulator Matrix] (N = Neuron 0~3)
+                          N 0        N1         N2         N3 
+          Img0(R0) --> [  -1201] [  -1726] [   4829] [  -4097]
+          Img1(R1) --> [  18004] [   1232] [ -28361] [ -32768]
+          Img2(R2) --> [   8248] [   2265] [      5] [    884]
+          Img3(R3) --> [    914] [  -5433] [ -15979] [ -13389] (실제로는 이 값이 맞는 값임)
+        
+        ...
+        
+        ====== [Cycle:  796] State: CALC_L1 | k_cnt: 794 | Group: 0 | pe_en:1 | pe_rst:0 ======
+          [PE Accumulator Matrix] (N = Neuron 0~3)
+                          N 0        N1         N2         N3 
+          Img0(R0) --> [  -1201] [  -1726] [   4829] [  -4097]
+          Img1(R1) --> [  18004] [   1232] [ -28361] [ -32768]
+          Img2(R2) --> [   8248] [   2265] [      5] [    884]
+          Img3(R3) --> [    914] [  -5433] [ -15979] [ -13172]
 
+- 3️⃣ FSM State Transition Timing & Golden Model 비교
+    - 최종 MAC 결과를 BUFFER_WR_L1 state에서 Unified Buffer에 저장해야 한다. 그 전에, Golden Model에서 Testbench를 재작성하여 각 sample 별 Layer 1 출력 결과 중 일부를 살펴보자.
 
+            ====== [Image 0] LAYER 1 OUTPUT (Cycle: 807) ======
+                N[ 0- 4]:   72    17    95    30   
+            
+            ====== [Image 1] LAYER 1 OUTPUT (Cycle: 1735) ======
+                N[ 0- 4]:  127    51     0     0   
+            
+            ====== [Image 2] LAYER 1 OUTPUT (Cycle: 2663) ======
+                N[ 0- 4]:  127    66    28   100  
+            
+            ====== [Image 3] LAYER 1 OUTPUT (Cycle: 3591) ======
+                N[ 0- 4]:  100     3     0     0     
 
+    - 저장 결과에 대한 출력 로그는 다음과 같다.
 
+            ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 796, Time 8065000) ############
+              [BUF_WR] Cycle:  798 | addr=  0 | data=  72 | act_out=  17 | AU_psum=  4829 | AU_bias= -2560 | seq= 2
+              [BUF_WR] Cycle:  799 | addr=  1 | data=  17 | act_out=  95 | AU_psum= -4097 | AU_bias=  1792 | seq= 3
+              [BUF_WR] Cycle:  800 | addr=  2 | data=  95 | act_out=  30 | AU_psum= 18004 | AU_bias=  1792 | seq= 4
+              [BUF_WR] Cycle:  801 | addr=  3 | data=  30 | act_out= 127 | AU_psum=  1232 | AU_bias= -2048 | seq= 5
+              [BUF_WR] Cycle:  802 | addr= 32 | data= 127 | act_out=  51 | AU_psum=-28361 | AU_bias= -2560 | seq= 6
+              [BUF_WR] Cycle:  803 | addr= 33 | data=  51 | act_out=   0 | AU_psum=-32768 | AU_bias=  1792 | seq= 7
+              [BUF_WR] Cycle:  804 | addr= 34 | data=   0 | act_out=   0 | AU_psum=  8248 | AU_bias=  1792 | seq= 8
+              [BUF_WR] Cycle:  805 | addr= 35 | data=   0 | act_out= 127 | AU_psum=  2265 | AU_bias= -2048 | seq= 9
+              [BUF_WR] Cycle:  806 | addr= 64 | data= 127 | act_out=  66 | AU_psum=     5 | AU_bias= -2560 | seq=10
+              [BUF_WR] Cycle:  807 | addr= 65 | data=  66 | act_out=  28 | AU_psum=   884 | AU_bias=  1792 | seq=11
+              [BUF_WR] Cycle:  808 | addr= 66 | data=  28 | act_out= 100 | AU_psum=   914 | AU_bias=  1792 | seq=12
+              [BUF_WR] Cycle:  809 | addr= 67 | data= 100 | act_out= 100 | AU_psum= -5433 | AU_bias= -2048 | seq=13
+              [BUF_WR] Cycle:  810 | addr= 96 | data= 100 | act_out=   3 | AU_psum=-15979 | AU_bias= -2560 | seq=14
+              [BUF_WR] Cycle:  811 | addr= 97 | data=   3 | act_out=   0 | AU_psum=-13389 | AU_bias=  1792 | seq=15
+              [BUF_WR] Cycle:  812 | addr= 98 | data=   0 | act_out=   0 | AU_psum= -1201 | AU_bias=  1792 | seq=16
 
-
-
-
-
-
-
-
-
-
-
+    - 로그 분석 결과, test_data_0000 ~ 0002.txt 구간까지는 Layer 1(Neuron 0~3)의 연산 결과가 의도된 메모리 주소에 정확히 저장됨을 확인했다. 그러나 마지막 샘플인 test_data_0003.txt 처리 구간에서 데이터가 전부 저장되지 않는 현상이 발견되었다. 이는 데이터 저장 주소 카운터인 seq 값이 데이터 도달 시점보다 일찍 종료되어, 마지막 결과값을 담을 주소 공간을 할당하지 못했기 때문이다. 이는 파이프라인 지연이 누적되면서, 결과 데이터를 버퍼에 쓰는 타이밍이 데이터 유효 구간보다 짧아져서 발생한 문제이다.
 
 
 
