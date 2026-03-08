@@ -418,3 +418,5 @@
                                     write_seq_cnt <= write_seq_cnt + 1;
                                 end
                             end
+
+      - IDLE 전이 동작       
