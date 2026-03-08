@@ -170,15 +170,214 @@
             );
         endmodule
 
+        module Systolic_Array #(
+            parameter integer dataWidth = 8,
+            parameter integer ARRAY_ROW = 4,
+            parameter integer ARRAY_COL = 4
+        )(
+            input  signed [ARRAY_ROW*dataWidth-1:0]              i_row_data,
+            input  signed [ARRAY_COL*dataWidth-1:0]              i_col_data,
+            input                                                i_clk,
+            input                                                i_rst, 
+            input                                                i_en,
+        
+            output signed [ARRAY_ROW*ARRAY_COL*2*dataWidth-1:0]  o_array_out,  
+            output signed [ARRAY_ROW*ARRAY_COL*2*dataWidth-1:0]  pe_acc_sum 
+            `ifdef DEBUG
+          , output signed [2*dataWidth-1:0]                    o_debug_pe00_mul
+            `endif
+        );
+        
+            // ---------------------------------------------------------
+            // 1. Unpacking Inputs (Packed -> Unpacked Matching)
+            // ---------------------------------------------------------
+            wire signed [dataWidth-1:0] a_data [0:ARRAY_ROW-1];
+            wire signed [dataWidth-1:0] b_data [0:ARRAY_COL-1];
+        
+            genvar r, c;
+            generate
+                for (r=0; r<ARRAY_ROW; r=r+1) begin : GEN_SPLIT_A
+                    assign a_data[r] = i_row_data[r*dataWidth +: dataWidth];
+                end
+                for (c=0; c<ARRAY_COL; c=c+1) begin : GEN_SPLIT_B
+                    assign b_data[c] = i_col_data[c*dataWidth +: dataWidth];
+                end
+            endgenerate
+        
+            // ---------------------------------------------------------
+            // 2. Interconnect Wires (Systolic Data Flow)
+            // ---------------------------------------------------------
+            // a_conn[r][c]   : PE[r][c]의 입력 (Input)
+            // a_conn[r][c+1] : PE[r][c]의 출력 (Output -> Next PE Input)
+            wire signed [dataWidth-1:0]     a_conn [0:ARRAY_ROW-1][0:ARRAY_COL]; 
+            wire signed [dataWidth-1:0]     b_conn [0:ARRAY_ROW][0:ARRAY_COL-1];
+            
+            // Debug & Result Wiring
+            wire signed [2*dataWidth-1:0]   mul_debug [0:ARRAY_ROW-1][0:ARRAY_COL-1];
+            wire signed [2*dataWidth-1:0]   acc_debug [0:ARRAY_ROW-1][0:ARRAY_COL-1];
+        
+            // ---------------------------------------------------------
+            // 3. Edge Connection (Array의 왼쪽/위쪽 끝 연결)
+            // ---------------------------------------------------------
+            generate
+                for (r=0; r<ARRAY_ROW; r=r+1) begin : GEN_A_EDGE
+                    assign a_conn[r][0] = a_data[r]; 
+                end
+                for (c=0; c<ARRAY_COL; c=c+1) begin : GEN_B_EDGE
+                    assign b_conn[0][c] = b_data[c]; 
+                end
+            endgenerate
+        
+            // ---------------------------------------------------------
+            // 4. PE Instantiation
+            // ---------------------------------------------------------
+            generate
+                for (r=0; r<ARRAY_ROW; r=r+1) begin : GEN_ROW
+                    for (c=0; c<ARRAY_COL; c=c+1) begin : GEN_COL
+                        
+                        // Result Flattening (2D -> 1D Output Bus)
+                        assign o_array_out[(r*ARRAY_COL + c)*2*dataWidth +: 2*dataWidth] 
+                               = acc_debug[r][c];
+                        assign pe_acc_sum [(r*ARRAY_COL + c)*2*dataWidth +: 2*dataWidth] 
+                               = acc_debug[r][c];
+                        pe_systolic_cell #(
+                            .dataWidth (dataWidth)
+                        ) dut (
+                            // Data Passing Connections
+                            .i_a        (a_conn[r][c]),      
+                            .i_b        (b_conn[r][c]),      
+                            .o_a        (a_conn[r][c+1]),    
+                            .o_b        (b_conn[r+1][c]),    
+                            // Control Signals
+                            .i_clk      (i_clk),
+                            .i_rst      (i_rst), 
+                            .i_en       (i_en),
+                            // Results
+                            .o_debugmul (mul_debug[r][c]),
+                            .o_psum     (acc_debug[r][c])
+                        );
+                    end
+                end
+            endgenerate
+        
+            `ifdef DEBUG
+                assign o_debug_pe00_mul = mul_debug[0][0];
+            `endif
+        endmodule
+
+    - 기존 Systolic_Array의 개선은 PE.v에서 대부분 반영하였으며, pe_systolic_cell과 systolic_array의 로직은 기존 DUT 로직과 동일하게 Data Skewing 기반으로 동작하며, 입력 데이터를 레지스터에 저장하여 데이터를 안정적으로 전달하는 방식으로 설계되었다.
+    -  최종적으로 Systolic_Array.v용으로 작성된 tb를 최소한의 수정만 적용하여 재사용하였으며, 마찬가지로 입력 데이터(0, 최대 양수, 최대 음수, 일반 값)와 제어 신호(i_en, i_rst)의 모든 유효 조합에 대해 coverpoint를 구성하였다. 검증 결과 functional coverage 100%를 만족하였고, 기능적으로 정상 동작함을 확인하였다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_43.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_44.png" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_45.png" width="400"/>
+
+<div align="left">
+
+### Data_Skewing.v
+
+        module Data_Skewing #(
+            parameter integer dataWidth  = 8,      // 데이터 비트폭
+            parameter integer ARRAY_ROW  = 4,      // Systolic Array 행 수
+            parameter integer ARRAY_COL  = 4       // Systolic Array 열 수
+        )(
+            input  wire                               i_clk,       
+            input  wire                               i_rst,      
+            input  wire                               i_en,        
+        
+            input  wire [ARRAY_ROW*dataWidth-1:0]     i_row_data,  // Raw Row [Row3|Row2|Row1|Row0]
+            input  wire [ARRAY_COL*dataWidth-1:0]     i_col_data,  // Raw Col [Col3|Col2|Col1|Col0]
+        
+            output wire [ARRAY_ROW*dataWidth-1:0]     o_row_data,  // Skewed Row
+            output wire [ARRAY_COL*dataWidth-1:0]     o_col_data   // Skewed Col
+        );
+        
+            // ===== 1. Packed → Unpacked Bit Slicing(Matching) =====
+            wire signed [dataWidth-1:0] row_in [0:ARRAY_ROW-1];
+            wire signed [dataWidth-1:0] col_in [0:ARRAY_COL-1];
+        
+            genvar r;
+            generate
+                for (r = 0; r < ARRAY_ROW; r = r + 1) begin : UNPACK_ROW
+                    assign row_in[r] = i_row_data[r*dataWidth +: dataWidth];
+                end
+                for (r = 0; r < ARRAY_COL; r = r + 1) begin : UNPACK_COL
+                    assign col_in[r] = i_col_data[r*dataWidth +: dataWidth];
+                end
+            endgenerate
+        
+        /*
+        row_in, col_in : packed data를 쪼개서 다루기 위해 선언한 inner wire array
+        +: : Indexed Vector Part Select를 통해 i_row_data[r*dataWidth +: dataWidth]로 비트를 잘라,
+             32bit bus를 8bit x 4개 (row_in[0] ~ row_in[3])로 분리한다.
+        */
+        
+            // ===== 2. Row Skewing Shift Registers =====
+            // Row 1: 1단 SR
+            reg signed [dataWidth-1:0] row_sr_1_0;
+            // Row 2: 2단 SR chain
+            reg signed [dataWidth-1:0] row_sr_2_0, row_sr_2_1;
+            // Row 3: 3단 SR chain
+            reg signed [dataWidth-1:0] row_sr_3_0, row_sr_3_1, row_sr_3_2;
+        
+            always @(posedge i_clk) begin
+                if (i_rst) begin
+                    row_sr_1_0 <= 0;
+                    row_sr_2_0 <= 0; row_sr_2_1 <= 0;
+                    row_sr_3_0 <= 0; row_sr_3_1 <= 0; row_sr_3_2 <= 0;
+                end else if (i_en) begin
+        // 1-stage
+                    row_sr_1_0 <= row_in[1];    
+        // 2-stage                      
+                    row_sr_2_0 <= row_in[2]; row_sr_2_1 <= row_sr_2_0; 
+        // 3-stage
+                    row_sr_3_0 <= row_in[3]; row_sr_3_1 <= row_sr_3_0; row_sr_3_2 <= row_sr_3_1; 
+                end
+            end
+        
+            // ===== 3. Column Skewing Shift Registers =====
+            reg signed [dataWidth-1:0] col_sr_1_0;
+            reg signed [dataWidth-1:0] col_sr_2_0, col_sr_2_1;
+            reg signed [dataWidth-1:0] col_sr_3_0, col_sr_3_1, col_sr_3_2;
+        
+            always @(posedge i_clk) begin
+                if (i_rst) begin
+                    col_sr_1_0 <= 0;
+                    col_sr_2_0 <= 0; col_sr_2_1 <= 0;
+                    col_sr_3_0 <= 0; col_sr_3_1 <= 0; col_sr_3_2 <= 0;
+                end else if (i_en) begin
+        // 1-stage
+                    col_sr_1_0 <= col_in[1];
+        // 2-stage
+                    col_sr_2_0 <= col_in[2]; col_sr_2_1 <= col_sr_2_0;
+        // 3-stage
+                    col_sr_3_0 <= col_in[3]; col_sr_3_1 <= col_sr_3_0; col_sr_3_2 <= col_sr_3_1;
+                end
+            end
+        /*
+        Row 번호, Col 번호 (r, c)만큼 Cycle delay를 준다.
+        */
+        
+            // ===== 4. Output Packing =====
+            assign o_row_data = {row_sr_3_2, row_sr_2_1, row_sr_1_0, row_in[0]};
+            assign o_col_data = {col_sr_3_2, col_sr_2_1, col_sr_1_0, col_in[0]};
+        /*
+        {...} (Concatenation): 지연된 각각의 신호들을 다시 하나의 큰 버스로 합침
+        순서: [Row 3(3 delay), Row 2(2 delay), Row 1(1 delay), Row 0(0 delay)]
+        Row 0 / Col 0: row_in[0], col_in[0]이 바로 사용된다. 
+        (레지스터를 거치지 않은 0 사이클 지연 값)
+        나머지는 각 파이프라인의 마지막 레지스터 값(row_sr_3_2 등)을 출력으로 내보냄.
+        */
+        endmodule
 
 
-
-
-
-
-
-
-
+- DUT
 
 
 
