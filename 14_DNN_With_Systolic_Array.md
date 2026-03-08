@@ -495,48 +495,32 @@
         1. Cycle 813 (BUFFER_WR_L1 종료) : 
             - state <= CALC_L1, group_cnt <= 1, k_cnt <= 0, pe_rst <= 1 설정.
             - Non-blocking (<=)에 의해 Cycle 814의 Rising Edge에 적용
+        2. Cycle 814 (CALC_L1 진입) : 
+            - 하지만 Weight_Memory는 동기식이므로, Cycle 814에 새 주소를 받고, Cycle 815에 출력
+            - 결과: Cycle 814에는 부적절한 가중치 (Group 0의 마지막 값 또는 'x')가 나옴
+        3. Cycle 815 : 
+            - Weight_Bank는 idx = 4, 5, 6, 7을 계산하여 w_1_4 ~ w_1_7을 선택.
+            - 하지만 Weight_Memory는 여전히 부적절한 가중치 (Group 0의 마지막 값 또는 'x')가 나옴​
 
-​
+    - 🚀 [개선 방안] Group State Transition시 Unknown 발생 / PRE_CALC state 추가
+      - 따라서 제어 흐름이 명확히하고, 각 상태의 역할이 분명하게 하기 위해 state를 추가한다. 추가된 부분은 아래와 같이 FSM state를 각 CALC마다 추가한다.
+        
+            localparam PRE_CALC_L1 = 9,  // Layer 1 사전 준비
+                       PRE_CALC_L2 = 10, // Layer 2 사전 준비
+                       PRE_CALC_L3 = 11; // Layer 3 사전 준비
+                       
+            reg pre_calc_cnt; //PRE_CALC Cycle Counter
+        
+      - 특히, Weight_Memory에서 부적절한 weight가 나오기 때문에, 해당 모듈의 관점에서 Timing을 분석 해보고, State가 어느 정도 사이클이 필요한지 분석하고 이를 기반으로 FSM을 재설계한다.
 
-2. Cycle 814 (CALC_L1 진입) : 
+      - Weight_Memory : Synchronous ROM
 
-하지만 Weight_Memory는 동기식이므로, Cycle 814에 새 주소를 받고, Cycle 815에 출력
-
-결과: Cycle 814에는 부적절한 가중치 (Group 0의 마지막 값 또는 'x')가 나옴
-
-​
-
-3. Cycle 815 : 
-
-Weight_Bank는 idx = 4, 5, 6, 7을 계산하여 w_1_4 ~ w_1_7을 선택.
-
-하지만 Weight_Memory는 여전히 부적절한 가중치 (Group 0의 마지막 값 또는 'x')가 나옴
-
-​
-
-​
-
-[개선 방안] Group State Transition시 Unknown 발생 / PRE_CALC state 추가
-
-따라서 제어 흐름이 명확히하고, 각 상태의 역할이 분명하게 하기 위해 state를 추가한다. 추가된 부분은 아래와 같이 FSM state를 각 CALC마다 추가한다.
-
-    localparam PRE_CALC_L1 = 9,  // Layer 1 사전 준비
-               PRE_CALC_L2 = 10, // Layer 2 사전 준비
-               PRE_CALC_L3 = 11; // Layer 3 사전 준비
-               
-    reg pre_calc_cnt; //PRE_CALC Cycle Counter
-특히, Weight_Memory에서 부적절한 weight가 나오기 때문에, 해당 모듈의 관점에서 Timing을 분석 해보고, State가 어느 정도 사이클이 필요한지 분석하고 이를 기반으로 FSM을 재설계한다.
-
-​
-
-●Weight_Memory : Synchronous ROM
-
-// Weight_Memory.v
-always @(posedge i_clk) begin
-    if (i_ren) begin
-        o_wout <= mem[i_radd];  // ← Non-blocking! 다음 클럭에 출력
-    end
-end
+            // Weight_Memory.v
+            always @(posedge i_clk) begin
+                if (i_ren) begin
+                    o_wout <= mem[i_radd];  // ← Non-blocking! 다음 클럭에 출력
+                end
+            end
 
 
 
