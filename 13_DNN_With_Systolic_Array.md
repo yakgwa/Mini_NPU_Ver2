@@ -704,35 +704,35 @@
 
     - 0️⃣ Parameter & Port 정의
 
-            module TB_NPU_Top();
-                localparam dataWidth = `dataWidth;       
-                localparam TIMEOUT_CYCLES = 50000;        
-            
-                reg                          clk;
-                reg                          rst_n;
-                reg                          start_inference;
-                reg  [4*dataWidth-1:0]       input_pixels;
-                reg                          input_valid;
-                wire                         done;
-                wire [31:0]                  result_0, result_1, result_2, result_3;
-            
-                // [Image Memory]
-                // 각 이미지: 784 pixels (index 0~783) + 1 label (index 784) = 785 entries
-                reg [dataWidth-1:0] img_mem_0 [0:784];
-                reg [dataWidth-1:0] img_mem_1 [0:784];
-                reg [dataWidth-1:0] img_mem_2 [0:784];
-                reg [dataWidth-1:0] img_mem_3 [0:784];
-            
-                // [Log File Handle]
-                int log_fd;          
-            
-                // [Counters]
-                int cycle_cnt;      
-                int pass_count;
-                int total_count;
-            
-                // [State Tracking]
-                reg [3:0] prev_state;    // 이전 사이클 FSM 상태
+                module TB_NPU_Top();
+                    localparam dataWidth = `dataWidth;       
+                    localparam TIMEOUT_CYCLES = 50000;        
+                
+                    reg                          clk;
+                    reg                          rst_n;
+                    reg                          start_inference;
+                    reg  [4*dataWidth-1:0]       input_pixels;
+                    reg                          input_valid;
+                    wire                         done;
+                    wire [31:0]                  result_0, result_1, result_2, result_3;
+                
+                    // [Image Memory]
+                    // 각 이미지: 784 pixels (index 0~783) + 1 label (index 784) = 785 entries
+                    reg [dataWidth-1:0] img_mem_0 [0:784];
+                    reg [dataWidth-1:0] img_mem_1 [0:784];
+                    reg [dataWidth-1:0] img_mem_2 [0:784];
+                    reg [dataWidth-1:0] img_mem_3 [0:784];
+                
+                    // [Log File Handle]
+                    int log_fd;          
+                
+                    // [Counters]
+                    int cycle_cnt;      
+                    int pass_count;
+                    int total_count;
+                
+                    // [State Tracking]
+                    reg [3:0] prev_state;    // 이전 사이클 FSM 상태
 
 
 
