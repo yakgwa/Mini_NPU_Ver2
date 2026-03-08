@@ -424,7 +424,7 @@
 
     - Reference Model 코드 분석 시 꼼꼼하게 분석한 부분들을 다시 한 번 짚어보면, 뉴런 내부에서 input × weight (곱셈), sum + bias (누산)에 따른 확장된 16bit가 입력으로 들어오며, ReLU 출력은 다시 다음 layer의 입력 인터페이스 폭을 고정시키기 위해 dataWidth(8bit)로  scaled-down (re-quantization)된다.
     - ReLU 입력 i_in의 비트 구간 의미는 dataWidth=8, weightIntWidth=4 기준으로 다음과 같다.
-    - i_in [15:12] | [11:4] | [3:0]
+      - i_in [15:12] | [11:4] | [3:0]
     - i_in[11:4] : 다음 layer로 전달할 실제 output (8bit)
     - i_in[3:0] : 소수부 LSB → truncation으로 제거
     - i_in[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
