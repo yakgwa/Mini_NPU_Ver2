@@ -147,10 +147,10 @@
 
      - 로그 분석 결과, 예상했던 Cycle 47이 아닌 1 Cycle 지연된 시점(Cycle 48)에 데이터가 관측되었다. 이는 하드웨어의 Cycle-by-Cycle 데이터 전달 메커니즘을 통해 설명할 수 있다.
      1) Cycle 47 (데이터 도달) : Rising 직후, Data Skewing을 거쳐 PE의 i_a, i_b 도달한다. 하지만 이 시점은 데이터가 포트에만 와있을 뿐, 아직 내부 a_reg에는 저장되지 않은 상태이다.
-     2) 2) Cycle 48 (데이터 캡처) : Rising 순간에 pe_systolic_cell에 대기 중이던 데이터가 a_reg, b_reg로 Capture된다. 이 시점부터 PE가 데이터를 인식하게 되며, 로그 상에서도 유효 데이터로 출력된다.
+     2) Cycle 48 (데이터 캡처) : Rising 순간에 pe_systolic_cell에 대기 중이던 데이터가 a_reg, b_reg로 Capture된다. 이 시점부터 PE가 데이터를 인식하게 되며, 로그 상에서도 유효 데이터로 출력된다.
      - 이러한 현상은 입력 레지스터(a_reg)를 활용한 Pipelining 설계의 특징이다. assign o_a = a_reg; 구문을 통해 현재 사이클에 캡처한 데이터를 다음 사이클에 우측 PE로 전달한다. 이는 데이터 전달과 MAC을 안정적으로 분리하여 Critical Path를 최적화하고 Fmax를 확보하기 위함이다.
 
-
+### 분석 : 구체적인 타이밍 검증1
 
 
 
