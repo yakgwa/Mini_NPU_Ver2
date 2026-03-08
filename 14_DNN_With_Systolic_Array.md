@@ -431,13 +431,64 @@
               [BUF_WR] Cycle:  812 | addr= 98 | data=   0 | act_out=   0 | AU_psum= -1201 | AU_bias=  1792 | seq=16
               [BUF_WR] Cycle:  813 | addr= 99 | data=   0 | act_out=  72 | AU_psum= -1726 | AU_bias= -2048 | seq=17
 
+      - 이제 BUF_WR이 마무리 되었다면, 다음과 같은 조건에 의해 Layer 1의 Neuron 4~7번째를 계산할 차례이다. 즉, Group1에 대한 CALC_L1 state로 넘어갈 차례이다.
 
+                                if (write_seq_cnt == 16+1) begin
+                                    // 모든 뉴런 그룹 처리 완료?
+                                    if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                                       // Layer 1 완료 → Layer 2로 전환
+                                        ...
+            -> 아직 뉴런 4개만 처리했으므로 아래 if 조건 성립 x
+                                    end else begin
+                                        // 다음 뉴런 그룹 처리
+                                        state <= CALC_L1;
+                                        group_cnt <= group_cnt + 1;
+                                        k_cnt <= 0;
+                                        pe_rst <= 1;
 
+      - 따라서 그 다음 Group1 CALC_L1 state에 대한 출력 로그를 분석해보자.
 
-
-
-
-
+            ====== [Cycle:  814] State: CALC_L1 | k_cnt:   0 | Group: 1 | pe_en:0 | pe_rst:1 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=x  C1=x  C2=x  C3=x
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=x  C1=   0  C2=   0  C3=   0]
+              [PE Accumulator Matrix] (N = Neuron 4~7)
+                              N4         N5         N6         N7 
+              Img0(R0) --> [  -1201] [  -1726] [   4829] [  -4097]
+              Img1(R1) --> [  18004] [   1232] [ -28361] [ -32768]
+              Img2(R2) --> [   8248] [   2265] [      5] [    884]
+              Img3(R3) --> [    914] [  -5433] [ -15979] [ -13389]
+            
+            ====== [Cycle:  815] State: CALC_L1 | k_cnt:   1 | Group: 1 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=x  C1=x  C2=x  C3=x
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=x  C1=   0  C2=   0  C3=   0
+              [PE Accumulator Matrix] (N = Neuron 4~7)
+                              N4         N5         N6         N7 
+              Img0(R0) --> [      0] [      0] [      0] [      0]
+              Img1(R1) --> [      0] [      0] [      0] [      0]
+              Img2(R2) --> [      0] [      0] [      0] [      0]
+              Img3(R3) --> [      0] [      0] [      0] [      0]
+            
+            ====== [Cycle:  816] State: CALC_L1 | k_cnt:   2 | Group: 1 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=x  C2=   0  C3=   0
+              [PE Accumulator Matrix] (N = Neuron 4~7)
+                              N4         N5         N6         N7 
+              Img0(R0) --> [      0] [      0] [      0] [      0]
+              Img1(R1) --> [      0] [      0] [      0] [      0]
+              Img2(R2) --> [      0] [      0] [      0] [      0]
+              Img3(R3) --> [      0] [      0] [      0] [      0]
 
 
 
