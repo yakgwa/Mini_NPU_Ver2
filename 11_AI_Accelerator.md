@@ -195,29 +195,29 @@
 
       - Systolic Array가 만든 연산 결과(Packed Array, pe_acc_sum)를 각 PE 위치별로 partial하여 Bias를 빼고, ReLu Activation Function을 적용한 뒤, 다시 기존에 port로 정의한 출력(o_mat)에 꽂는 역할을 한다. 따라서 pe_acc_sum은 o_mat과 동일하게 wire 선언한다.
 
-        wire [ROWS*COLS*ACC_W-1:0] pe_acc_sum;
+            wire [ROWS*COLS*ACC_W-1:0] pe_acc_sum;
 
       - 이후, PE(r,c)마다 동일한 PPU 로직을 복제하기 위해 generate 구문을 사용하여 ROWSXCOLS개의 동일한 조합논리 블록을 만들어 준다.
 
-        generate
-          for (r = 0; r < ROWS; r = r + 1) begin : GEN_PPU_ROW
-            for (c = 0; c < COLS; c = c + 1) begin : GEN_PPU_COL
+            generate
+              for (r = 0; r < ROWS; r = r + 1) begin : GEN_PPU_ROW
+                for (c = 0; c < COLS; c = c + 1) begin : GEN_PPU_COL
 
       - generate 구문 내부에서는 for문을 수행할 떄마다 누산 결과 하나를 저장하고 Bias + ReLU를 수행하여 o_mat에 전달할 수 있도록 output 비트 폭 만큼의 변수를 wire 선언할 필요가 있다.
 
-        wire [ACC_W-1:0] raw;
-        assign raw = pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W];
+            wire [ACC_W-1:0] raw;
+            assign raw = pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W];
 
       - 이때 Bias를 빼면, 음수가 될 수 잇으므로 Signed로 선언하고, 부호 비트를 안전하게 표현하기 위해 비트 폭을 ACC_W+1로 선언한다. 이후, tmp로 bias subtraction 연산
      
-        assign tmp = $signed({1'b0, raw}) - $signed(BIAS);
-        //그냥 $signed(raw)해버리면 MSB 1인 경우에 대해 음수로 오해석될 위험이 있다.
-        //따라서 MSB에 추가로 0을 붙여서 강제로 양수로 확장시킨다.
+            assign tmp = $signed({1'b0, raw}) - $signed(BIAS);
+            //그냥 $signed(raw)해버리면 MSB 1인 경우에 대해 음수로 오해석될 위험이 있다.
+            //따라서 MSB에 추가로 0을 붙여서 강제로 양수로 확장시킨다.
 
       - 이후, Output을 packed array로 출력함과 동시에 ReLU activation function 원리를 적용하여 assign 구문을 적용시켜준다.
 
-        assign o_mat[(r*COLS + c)*ACC_W +: ACC_W] =
-            (tmp < 0) ? {ACC_W{1'b0}} : tmp[ACC_W-1:0];
+            assign o_mat[(r*COLS + c)*ACC_W +: ACC_W] =
+                (tmp < 0) ? {ACC_W{1'b0}} : tmp[ACC_W-1:0];
 
     - 5️⃣ 5) DUT Instantiation
 
