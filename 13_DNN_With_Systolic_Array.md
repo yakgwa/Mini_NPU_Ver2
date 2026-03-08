@@ -736,7 +736,24 @@
 
 - 1️⃣ DUT Instantiation
 
-
+        // ======================================================================================
+        // DUT Instantiation
+        // ======================================================================================
+        NPU_Top #(
+            .dataWidth(dataWidth)
+        ) dut (
+            .i_clk(clk),
+            .i_rst_n(rst_n),
+            .i_start_inference(start_inference),
+            .i_input_pixels(input_pixels),
+            .i_input_valid(input_valid),
+            .o_done_interrupt(done),
+            .o_result_class_0(result_0),
+            .o_result_class_1(result_1),
+            .o_result_class_2(result_2),
+            .o_result_class_3(result_3)
+        );
+        always #5 clk = ~clk;
 
 
 
