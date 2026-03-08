@@ -427,3 +427,13 @@
         5) cur_act_sel ← SIG: Sigmoid 활성화
         6) group_cnt ← 0: 첫 번째 뉴런 그룹
         7) k_cnt ← 0: 입력 시퀀스 초기화
+
+      - CALC_L1 전이 동작      
+        1) PE 리셋 해제
+        2) PE 활성화 조건에 따른 pe_en <= 1 ;
+        - cur_input_len - 1 (입력 종료 시점)
+          - 마지막 데이터(Data_Last)가 어레이의 입구(0행, 0열)에 들어가는 시간
+        4) cur_neuron_total ← 30: Layer 1 뉴런 수
+        5) cur_act_sel ← SIG: Sigmoid 활성화
+        6) group_cnt ← 0: 첫 번째 뉴런 그룹
+        7) k_cnt ← 0: 입력 시퀀스 초기화
