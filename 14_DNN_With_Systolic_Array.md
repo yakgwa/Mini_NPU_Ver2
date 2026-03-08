@@ -129,24 +129,26 @@
 
      - Cycle 3에 0번째 데이터가 인가되므로, 44번째 데이터는 3 + 44 = 47, 즉 Cycle 47에 나타날 것으로 예측된다. 따라서 1차적으로는 Cycle 47의 로그를 중점적으로 확인하였다.
 
-====== [Cycle:   47] State: CALC_L1 | k_cnt:  45 | Group: 0 | pe_en:1 | pe_rst:0 ======
-  [Raw Data (MUX Output)]
-    Row: R0=   0  R1=   0  R2=   0  R3=   0
-    Col: C0=   0  C1=   0  C2=   0  C3=   0
-  [Skewed Data (Array Edge)]
-    Row: R0=   0  R1=   0  R2=   0  R3=   0
-    Col: C0=   0  C1=   0  C2=   0  C3=   0
+            ====== [Cycle:   47] State: CALC_L1 | k_cnt:  45 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=   0
+            
+            ====== [Cycle:   48] State: CALC_L1 | k_cnt:  46 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   1  C1=   0  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   1  C1=   0  C2=   0  C3=   0
 
-====== [Cycle:   48] State: CALC_L1 | k_cnt:  46 | Group: 0 | pe_en:1 | pe_rst:0 ======
-  [Raw Data (MUX Output)]
-    Row: R0=   0  R1=   0  R2=   0  R3=   0
-    Col: C0=   1  C1=   0  C2=   0  C3=   0
-  [Skewed Data (Array Edge)]
-    Row: R0=   0  R1=   0  R2=   0  R3=   0
-    Col: C0=   1  C1=   0  C2=   0  C3=   0
-
-
-
+     - 로그 분석 결과, 예상했던 Cycle 47이 아닌 1 Cycle 지연된 시점(Cycle 48)에 데이터가 관측되었다. 이는 하드웨어의 Cycle-by-Cycle 데이터 전달 메커니즘을 통해 설명할 수 있다.
+     1) Cycle 47 (데이터 도달) : Rising 직후, Data Skewing을 거쳐 PE의 i_a, i_b 도달한다. 하지만 이 시점은 데이터가 포트에만 와있을 뿐, 아직 내부 a_reg에는 저장되지 않은 상태이다.
+     2) 2) Cycle 48 (데이터 캡처) : Rising 순간에 pe_systolic_cell에 대기 중이던 데이터가 a_reg, b_reg로 Capture된다. 이 시점부터 PE가 데이터를 인식하게 되며, 로그 상에서도 유효 데이터로 출력된다.
+     - 이러한 현상은 입력 레지스터(a_reg)를 활용한 Pipelining 설계의 특징이다. assign o_a = a_reg; 구문을 통해 현재 사이클에 캡처한 데이터를 다음 사이클에 우측 PE로 전달한다. 이는 데이터 전달과 MAC을 안정적으로 분리하여 Critical Path를 최적화하고 Fmax를 확보하기 위함이다.
 
 
 
