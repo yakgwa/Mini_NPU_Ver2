@@ -247,5 +247,30 @@ Proposed Model : Power
 
 - Reference Model의 100MHz Clock Frequency에서 Setup, Hold, Pulse Width 세 가지 조건 모두 충족되었음을 확인할 수 있다. 먼저 Setup 분석에서 WNS이 1.329ns로 나타났으며, TNS는 0.000ns, Failing Endpoints 역시 0으로 보고되어, 모든 경로가 요구된 클럭 주기 내에 안정적으로 데이터 전이를 완료하고 있음을 의미한다. 특히 WNS가 양수라는 점은 클럭 주기 대비 여유 마진이 존재함을 보여준다. 최대 동작 주파수는 이 Setup Slack을 이용하여 계산할 수 있다. 일반적으로 WNS는 '요구 클럭 주기 - 실제 경로 지연'의 차이를 의미하므로, 현재 설계에서 설정한 클럭 주기를 T라 하면, 다음과 같이 계산할 수 있다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_83.png" width="400"/>
 
+<div align="left">
 
+- Hold 분석에서도 WHS이 0.037ns로 양수이며, THS와 Failing Endpoints가 모두 0으로 나타났다. 이는 최소 지연 경로 또한 안정적으로 유지되고 있음을 의미하며, 매우 작은 수치이긴 하지만 hold  time violation은 발생하지 않은 상태이다. Pulse Width 분석에서도 Worst Pulse Width Slack이 4.020ns로 충분한 여유를 보이며, 위반 경로는 없다. 이는 클럭 신호의 high/low 유지 시간이 FPGA 내부 셀의 최소 요구 조건을 충분히 만족함을 의미한다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_77.png" width="400"/>
+
+Reference Model : Timing
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_78.png" width="400"/>
+
+Proposed Model : Timing
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_84.png" width="400"/>
+
+<div align="left">
+
+### Performance : Timing & Maximum Frequency
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_79.png" width="400"/>
+
+<div align="left">
