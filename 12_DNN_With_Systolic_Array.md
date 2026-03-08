@@ -81,500 +81,118 @@
                         `ifdef DEBUG ... `endif
         
             - 디버그 빌드에서는 곱 결과를 외부에서 관측할 수 있어 검증이 용이하고, 릴리즈 빌드에서는 해당 포트 자체가 제거되어 합성 및 배치 관점에서 더 깔끔한 구조를 유지할 수 있다.
-      1) signed : fixed-point를 고려한 SIGNED 연산
-            - 기존 mac_pe.v는 입력과 연산 경로가 unsigned로 정의되어 있다. 하지만 실제 DNN 연산에서는 activation이나 weight가 음수를 포함하는 경우가 일반적이며, fixed-point 환경에서는 부호 해석이 잘못되면 곱셈 단계부터 결과가 왜곡될 수 있다. 따라서 signed로 정의함으로써 음수 입력 및 가중치가 포함된 경우에도 하드웨어 동작과 수치 해석이 직관적으로 유지되도록 한다.
-      1) signed : fixed-point를 고려한 SIGNED 연산
-            - 기존 mac_pe.v는 입력과 연산 경로가 unsigned로 정의되어 있다. 하지만 실제 DNN 연산에서는 activation이나 weight가 음수를 포함하는 경우가 일반적이며, fixed-point 환경에서는 부호 해석이 잘못되면 곱셈 단계부터 결과가 왜곡될 수 있다. 따라서 signed로 정의함으로써 음수 입력 및 가중치가 포함된 경우에도 하드웨어 동작과 수치 해석이 직관적으로 유지되도록 한다.
-
-
-
-
-    - 2️⃣ Input Buffer Latch + <Packed→Unpacked> Mapping 정의
-
-            //==========================================================
-            //2. Input Buffer Latch
-            //Unpacked ↔ Packed Matching & Input Buffer(input data latch for store)
-            //==========================================================
-            reg [DATA_W-1:0] latched_mat_a [0:ROWS-1][0:K_DIM-1]; // ROW별 분리된 Unpacked Array
-            reg [DATA_W-1:0] latched_mat_b [0:K_DIM-1][0:COLS-1]; // COL별 분리된 Unpacked Array
-            
-            integer i, k; // Matrix A용 인덱스
-            integer j, m; // Matrix B용 인덱스
-            always @(posedge clk) begin
-                if (state == IDLE && i_start) begin
-                    // Matrix A Latching
-                    for (i = 0; i < ROWS; i = i + 1) begin
-                        for (k = 0; k < K_DIM; k = k + 1) begin
-                            // Flat Index = (현재 행 * 한 행의 크기 + 현재 열) * 데이터 폭
-                            latched_mat_a[i][k] <= i_mat_a[ (i * K_DIM + k) * DATA_W +: DATA_W ];
-                        end
-                    end
-                    // Matrix B Latching: [K_dim][Cols] 구조
-                    for (m = 0; m < K_DIM; m = m + 1) begin
-                        for (j = 0; j < COLS; j = j + 1) begin
-                            // Flat Index = (현재 행 * 한 행의 크기 + 현재 열) * 데이터 폭
-                            latched_mat_b[m][j] <= i_mat_b[ (m * COLS + j) * DATA_W +: DATA_W ];
-                        end
-                    end
-                end
-            end
-
-    - 3️⃣ Data Skewing Logic
-
-            //==========================================================
-            //3. Data Skewing Logic
-            //==========================================================
-            //Array Interface : 실제 Systolic Array로 들어가는 신호 정의
-            wire [ROWS*DATA_W-1:0] a_in_row;
-            wire [COLS*DATA_W-1:0] b_in_col;
+      3) Saturation 로직 추가
+            - PE.v에서는 오버플로우와 언더플로우 상황을 정확하게 처리하기 위해 포화Saturation 로직을 추가한다. 예컨대, 양수와 양수를 더했을 때 결과가 음수로 해석될 경우(즉, 부호 비트가 1로 바뀔 경우), 최대 양수 값(0x7FFF)으로, 음수와 음수를 더했을 때 결과가 양수로 해석될 경우(부호 비트가 0으로 바뀔 때), 최소 음수 값(0x8000)으로 saturation시킨다. 이러한 saturation 처리는 다음과 같은 방식으로 동작시킨다.
         
-            genvar r, c;
-            generate
-                // Row Logic (Matrix A)
-                for (r = 0; r < ROWS; r = r + 1) begin : GEN_ROW_DATA
-                    assign a_in_row[r*DATA_W +: DATA_W] = 
-                        ( (cnt >= r) && ((cnt - r) < K_DIM) ) ? latched_mat_a[r][cnt - r] : 
-                                                                {DATA_W{1'b0}};
-                end
-                // Col Logic (Matrix B)
-                for (c = 0; c < COLS; c = c + 1) begin : GEN_COL_DATA
-                    // [수정 2] latched_mat_a -> latched_mat_b 로 변경
-                    assign b_in_col[c*DATA_W +: DATA_W] = 
-                        ( (cnt >= c) && ((cnt - c) < K_DIM) ) ? latched_mat_b[cnt - c][c] : 
-                                                                {DATA_W{1'b0}};
-                end
-            endgenerate
+                        if (!sign_mul && !sign_sum && sign_res) sum <= 0x7FFF; 
+                        // 양수 + 양수가 음수로 해석될 때 
+                        if (sign_mul && sign_sum && !sign_res) sum <= 0x8000; 
+                        // 음수 + 음수가 양수로 해석될 때
+                        
+                        //이 로직을 통해 더 이상 부호 비트의 오류로 연c산이 잘못되거나 왜곡되는 일이 없도록 보장
 
+      4) 추후 PPA 개선 포인트 ①: 파이프라이닝(Pipelining)
+            - 현재 PE 구조에서는 한 클럭 사이클 내에 덧셈 반영은 한 클럭 이후에 반영될 뿐, 곱셈과 덧셈이 연속으로 수행된다. 특히 곱셈기는 덧셈기에 비해 지연이 크고 면적이 큰 회로인데, 이어 덧셈기까지 직렬로 연결되면 Critical Path가 훨씬 더 길어질 수 밖에 없다. 기능 검증 목적에서는 문제가 되지 않지만, 이후 성능 목표에 따라 가장 먼저 개선 대상이 될 수 있다. 이에 따라 타이밍 최적화를 위한 가장 대표적인 방법은 곱셈과 덧셈 사이에 레지스터를 추가하여 pipeline을 구성하는 것이다.
 
+                        현재 구조(단일 스테이지):
+                        Reg → [Mul] → [Add] → Reg 지연 = T_mul + T_add
+                        
+                        파이프라인 적용 시(2-stage):
+                        Stage 1: Reg → [Mul] → Pipe_Reg 
+                        Stage 2: Pipe_Reg → [Add] → Reg 
+                        "이에 따라 지연 시간 = max(T_mul, T_add)"
 
+            - 이렇게 하면 클럭 주기가 단축되어 Fmax를 높일 수 있다. 다만, 데이터가 1사이클 늦게 전달되므로 i_en과 같은 제어 신호도 동일하게 1클럭 지연시켜야 하며, 전체 MAC 연산의 latency가 1 증가한다는 trade-off가 존재한다.
+            - ​최종적으로 mac_pe.v용으로 작성된 tb_mac_pe.sv를 PE.v에 맞게 최소한의 수정만 적용하여 재사용하였으며, 입력 데이터(0, 최대 양수, 최대 음수, 일반 값)와 제어 신호(i_en, i_rst)의 모든 유효 조합에 대해 coverpoint를 구성하였다. 검증 결과 functional coverage 100%를 만족하였고, PE.v는 기능적으로 정상 동작함을 확인하였다.
 
-            // Row Logic (Matrix A)
-            for (r = 0; r < ROWS; r = r + 1) begin : GEN_ROW_DATA
-                assign a_in_row[r*DATA_W +: DATA_W] = 
-                    ( (cnt >= r) && ((cnt - r) < K_DIM) ) ? latched_mat_a[r][cnt - r] : 
-                                                            {DATA_W{1'b0}};
-
-      - row마다 하드웨어가 ROWS개가 복제된다. 이때, a_in_row를 각 row 입력을 bus에 차례대로 packing해주고, 이때, 아래와 같은 조건에 대해 latched_mat_a를 넣어줄지 결정한다.
-
-        (cnt >= r) && ((cnt - r) < K_DIM)
-        //cnt >= r (row가 시작했는가?), cnt - r < K_DIM (k가 범위 안인가?)
-
-      - systolic array에서 A[r][k]를 row r에 순서대로 넣고 싶은데, row가 아래로 갈수록 늦게 시작해야 대각선 정렬이 된다. 따라서 row r은 r만큼 늦게 시작하게 만들고, 그 이후엔 k가 0,1,2,3 순서로 들어갈 수 있게 한다.
-      - cnt=r일 때 → k=0, cnt=r+1일 때 → k=1, cnt=r+(K_DIM-1)일 때 → k=K_DIM-1
-      - 즉, 조건이 참이면 실제로 latched_mat_a[r][cnt - r]이 입력되며 시간에 따라 A[r][0], A[r][1], ...이 들어가게 된다. 만약, 조건이 거짓이라면 빈 구간에는 0을 흘려보내서 연산에 영향을 없게 한다.
-
-    - 4️⃣ PPU(ReLU + Bias)(즉, 후처리) + Output Mapping 정의
-
-            //==========================================================
-            // 4. Post-Processing Unit (ReLU + Bias)
-            //==========================================================
-            wire [ROWS*COLS*ACC_W-1:0] pe_acc_sum;
-            generate
-              for (r = 0; r < ROWS; r = r + 1) begin : GEN_PPU_ROW
-                for (c = 0; c < COLS; c = c + 1) begin : GEN_PPU_COL
-                  wire [ACC_W-1:0] raw; //o_mat으로 전달하기 위한 wire 
-                  assign raw = pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W];
-                  // Bias Subtraction (Signed)
-                  wire signed [ACC_W:0] tmp;
-                  assign tmp = $signed({1'b0, raw}) - $signed(BIAS);
-                  // ReLU Activation Function + o_mat assign
-                  assign o_mat[(r*COLS + c)*ACC_W +: ACC_W] =
-                      (tmp < 0) ? {ACC_W{1'b0}} : tmp[ACC_W-1:0];
-                end
-              end
-            endgenerate
-
-      - Systolic Array가 만든 연산 결과(Packed Array, pe_acc_sum)를 각 PE 위치별로 partial하여 Bias를 빼고, ReLu Activation Function을 적용한 뒤, 다시 기존에 port로 정의한 출력(o_mat)에 꽂는 역할을 한다. 따라서 pe_acc_sum은 o_mat과 동일하게 wire 선언한다.
-
-            wire [ROWS*COLS*ACC_W-1:0] pe_acc_sum;
-
-      - 이후, PE(r,c)마다 동일한 PPU 로직을 복제하기 위해 generate 구문을 사용하여 ROWSXCOLS개의 동일한 조합논리 블록을 만들어 준다.
-
-            generate
-              for (r = 0; r < ROWS; r = r + 1) begin : GEN_PPU_ROW
-                for (c = 0; c < COLS; c = c + 1) begin : GEN_PPU_COL
-
-      - generate 구문 내부에서는 for문을 수행할 떄마다 누산 결과 하나를 저장하고 Bias + ReLU를 수행하여 o_mat에 전달할 수 있도록 output 비트 폭 만큼의 변수를 wire 선언할 필요가 있다.
-
-            wire [ACC_W-1:0] raw;
-            assign raw = pe_acc_sum[(r*COLS + c)*ACC_W +: ACC_W];
-
-      - 이때 Bias를 빼면, 음수가 될 수 잇으므로 Signed로 선언하고, 부호 비트를 안전하게 표현하기 위해 비트 폭을 ACC_W+1로 선언한다. 이후, tmp로 bias subtraction 연산
-     
-            assign tmp = $signed({1'b0, raw}) - $signed(BIAS);
-            //그냥 $signed(raw)해버리면 MSB 1인 경우에 대해 음수로 오해석될 위험이 있다.
-            //따라서 MSB에 추가로 0을 붙여서 강제로 양수로 확장시킨다.
-
-      - 이후, Output을 packed array로 출력함과 동시에 ReLU activation function 원리를 적용하여 assign 구문을 적용시켜준다.
-
-            assign o_mat[(r*COLS + c)*ACC_W +: ACC_W] =
-                (tmp < 0) ? {ACC_W{1'b0}} : tmp[ACC_W-1:0];
-
-    - 5️⃣ 5) DUT Instantiation
-
-            //==========================================================
-            //5. systolic_array_2d.v Instantiation
-            //==========================================================   
-             systolic_array_2d #(
-               .DATA_W (DATA_W),
-               .ACC_W  (ACC_W),
-               .ROWS   (ROWS),
-               .COLS   (COLS)
-             ) u_core_array (
-               .clk        (clk),
-               .rst_n      (rst_n),
-               .clr        (array_clr),
-               .en         (array_en),
-               .a_in_row   (a_in_row),
-               .b_in_col   (b_in_col),
-               .pe_mul     (),
-               .pe_acc_sum (pe_acc_sum) 
-             );
-        endmodule
-
-      - DUT 요약
-         1) 입력 행렬 A,B를 packed array(i_mat_a, i_mat_b)로 받음
-         2) 시작 신호(i_start)에 맞춰 A,B를 내부 버퍼에 래치(latched_mat_a/b)
-         3) 카운터(cnt) 기반으로 A/B를 스큐 주입(a_in_row, b_in_col)
-         4) systolic_array_2d에 en/clr 제어와 함께 입력 주입
-         5) systolic_array_2d 출력 pe_acc_sum에 대해 Bias + ReLU를 적용하여 o_mat(packed array) 생성
-
-      - Moore Machine 기반 FSM 상태 전이 요약
-        
-        |State|입력/조건|Next-State|cnt 동작|출력|
-        | :---: | :---: | :---:| :---:| :---:|
-        |**IDLE**|**i_start=0**|**IDLE**|**0 유지**|**busy=0, done=0**|
-        |**IDLE**|**i_start=1**|**RUN**|**다음 사이클에 증가**|**busy=0→1**|
-        |**RUN**|**cnt < INJ_CYCLES**|**RUN**|**cnt++**|**busy=1**|
-        |**RUN**|**cnt > INJ_CYCLES**|**DONE**|**다음 사이클 cnt=0**|**busy=0, done=1**|
-        |**DONE**|**i_start=1**|**DONE**|**0 유지**|**done=1 유지**|
-        |**DONE**|**i_start=0**|**IDLE**|**0 유지**|**done=0**|
-
-      - 전체 블록 다이어그램 요약
-        - i_mat_a → <Packed→Unpacked> Mapping → latched_mat_a → Skew → a_in_row → SA 입력
-        - i_mat_b → <Packed→Unpacked> Mapping → latched_mat_b → Skew → b_in_col → SA 입력
-        - state/cnt → Skew Timing 결정
-        - state → array_en, array_clr, o_busy, o_done
-        - SA 출력 pe_acc_sum → PPU(ReLU+Bias) → o_ma
-
-      - 전체 블록 다이어그램 요약
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_36.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_41.png" width="400"/>
 
 <div align="left">
 
-- Testbench
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_42.png" width="400"/>
 
-        module tb_systolic_controller_relu;
-        
-          localparam int K_DIM  = 4;
-          localparam int DATA_W = 8;
-          localparam int ACC_W  = 2*DATA_W + $clog2(K_DIM);
-          localparam int ROWS   = 4;
-          localparam int COLS   = 4;
-          localparam int BIAS   = 50;
-        
-          //==========================================================
-          // Step 1) Interface Definition
-          //==========================================================
-          logic clk;
-          logic rst_n;
-        
-          logic i_start;
-          logic o_busy;
-          logic o_done;
-        
-          logic [ROWS*K_DIM*DATA_W-1:0] i_mat_a;   //packed array dut bus
-          logic [COLS*K_DIM*DATA_W-1:0] i_mat_b;   //packed array dut bus
-          logic [ROWS*COLS*ACC_W-1:0]   o_mat;     //packed array dut bus
-        
-          logic [DATA_W-1:0] tb_mat_a [0:ROWS-1][0:K_DIM-1];  //inner tb unpacked array
-          logic [DATA_W-1:0] tb_mat_b [0:K_DIM-1][0:COLS-1];  //inner tb unpacked array
-          logic [ACC_W-1:0]  tb_mat_c [0:ROWS-1][0:COLS-1];   //inner tb unpacked array
+### pe_systolic_cell.v / Systolic_Array.v
 
-    - 1️⃣ Parameter + Interface Definition
+- DUT
 
-          //==========================================================
-          // Step 2) Constrained Random Transaction
-          //==========================================================
-          class sa_ctrl_txn;
-            rand bit [DATA_W-1:0] A [0:ROWS-1][0:K_DIM-1];
-            rand bit [DATA_W-1:0] B [0:K_DIM-1][0:COLS-1];
-            rand bit do_start;
-            constraint c_start { do_start dist {1 := 70, 0 := 30}; }
-          endclass
-        
-          sa_ctrl_txn sa = new();
+        module pe_systolic_cell #(
+        parameter integer dataWidth = 8
+        )(
+        //본인 연산용 데이터 (왼쪽/위쪽에서 옴)
+        input  wire signed [dataWidth-1:0]    i_a,
+        input  wire signed [dataWidth-1:0]    i_b,
+        //옆/아래 PE로 전달할 데이터 (Registering -> Data Skew 용)
+        output wire signed [dataWidth-1:0]    o_a,
+        output wire signed [dataWidth-1:0]    o_b,
+        //Control
+        input  wire                           i_clk,
+        input  wire                           i_rst,    
+        input  wire                           i_en,
+        //Result
+        output wire signed [2*dataWidth-1:0]  o_debugmul, 
+        output wire signed [2*dataWidth-1:0]  o_psum  
+        );
 
-    - 2️⃣ Constrained Random Transaction
-      - 기존에 정의한 class와 큰 차이점은 없지만 이번 transaction에서는 두 입력과 start를 걸지 말지 rand bit do_start를 dist 구문을 활용한 확률 분포 제약을 건 세 가지 케이스를 random transaction한다.
+        // 1. Data Passing을 위한 Input Registering
+        // 입력을 1클럭 잡고 있다가 옆으로 넘겨줌
+        reg signed [dataWidth-1:0] a_reg;
+        reg signed [dataWidth-1:0] b_reg;
 
-              //==========================================================
-              // Step 3) DUT Instantiation
-              //==========================================================
-              systolic_controller_relu #(
-                ...
-              ) dut (
-                .clk     (clk),
-                .rst_n   (rst_n),
-                .i_start (i_start),
-                .i_mat_a (i_mat_a),
-                .i_mat_b (i_mat_b),
-                .o_busy  (o_busy),
-                .o_done  (o_done),
-                .o_mat   (o_mat)
-              );
-            
-              //==========================================================
-              // Clock / Reset
-              //==========================================================
-              initial begin
-                clk = 1'b0;
-                forever #5 clk = ~clk;
-              end
-            
-              initial begin
-                rst_n = 1'b0;
-                i_start = 1'b0;
-            
-                i_mat_a = '0;
-                i_mat_b = '0;
-                tb_mat_a = '{default:'0}; //inner tb 2D array → 0 reset
-                tb_mat_b = '{default:'0}; //inner tb 2D array → 0 reset
-                tb_mat_c = '{default:'0}; //inner tb 2D array → 0 reset
-            
-                #30;
-                rst_n = 1'b1;
-              end  
-            
-              //==========================================================
-              // Golden Model (Bias + ReLU)
-              //==========================================================
-              int unsigned      C_ref_int  [0:ROWS-1][0:COLS-1];
-              //golden model output을 최초로 int로 저장하는 2D array
-              //Bias subtraction 및 ReLU와 같은 PPU 진행과정에서 overflow 관리 목적
-              logic [ACC_W-1:0] C_ref [0:ROWS-1][0:COLS-1];
-              //golden model output인 C_ref_int를 dut 출력과 동일한 ACC_W 폭으로 저장
-            
-              task automatic calc_golden_relu();
-                for (int r=0; r<ROWS; r++) begin
-                  for (int c=0; c<COLS; c++) begin
-                    int tmp = 0; //(r,c) 하나의 누산 결과를 int로 계산할 임시 변수
-                    logic [ACC_W-1:0] tmp_c_ref;  
-            
-                    for (int k=0; k<K_DIM; k++) begin
-                      tmp += (sa.A[r][k] * sa.B[k][c]);
-                    end
-                    /*Bias*/ tmp -= BIAS; //누산 이후, Bias Subtraction
-                    /*ReLU*/ if (tmp < 0) tmp = 0; //ReLU Activation Function
-            
-                    C_ref_int[r][c] = tmp;
-                    tmp_c_ref = tmp;              
-                    C_ref[r][c] = tmp_c_ref;     
-                  end
-                end
-              endtask
+        assign o_a = a_reg;
+        assign o_b = b_reg;
 
-    - 3️⃣ DUT Instantiation + Clock/Reset 생성 + Golden Model & Checker
-      - Golden Model은 task automatic으로 calc_golden_relu 함수를 생성하여 Bias + ReLu의 PPU가 모두 적용된 최종적인 C_ref의 unpacked array를 생성시킨다.
+        always @(posedge i_clk) begin
+           if (i_rst) begin
+             a_reg <= 0;
+             b_reg <= 0;
+        end else if (i_en) begin
+            a_reg <= i_a;
+            b_reg <= i_b;
+        end
+    end
 
-              covergroup cg_ctrl;
-                cp_do_start : coverpoint sa.do_start { bins b0={0}; bins b1={1}; }
-            
-                cp_A00 : coverpoint sa.A[0][0] {
-                  bins zero={0}; 
-                  bins one={1}; 
-                  bins max={(2**DATA_W)-1};
-                  bins mid={[2:(2**DATA_W)-2]};
-                }
-            
-                cp_B00 : coverpoint sa.B[0][0] {
-                  bins zero={0}; 
-                  bins one={1}; 
-                  bins max={(2**DATA_W)-1};
-                  bins mid={[2:(2**DATA_W)-2]};
-                }
-              endgroup
-              cg_ctrl cg = new();
+    // PE Instantiation
+    // 실제 MAC 수행. 입력으로 Register된 값을 넣음.
+    PE #(
+        .dataWidth      (dataWidth)
+    ) dut (
+        .i_clk   (i_clk),
+        .i_rst   (i_rst),  
+        .i_en    (i_en),      
+        .i_a     (a_reg),   // Register된 값을 연산에 사용
+        .i_b     (b_reg),   // Register된 값을 연산에 사용
+        .o_psum  (o_psum)
+        `ifdef DEBUG
+        , .o_debugmul (o_debugmul) 
+        `endif
+    );
+endmodule
 
-    - 4️⃣ Functional Coverage
 
-        //==========================================================
-        // Packed ↔ Unpacked Array Mapping tasks
-        //==========================================================
-          task automatic pack_inputs();
-            i_mat_a = '0;
-            i_mat_b = '0;
-        
-            for (int i=0; i<ROWS; i++) begin
-              for (int k=0; k<K_DIM; k++) begin
-                i_mat_a[(i*K_DIM + k)*DATA_W +: DATA_W] = tb_mat_a[i][k];
-              end
-            end
-        
-            for (int m=0; m<K_DIM; m++) begin
-              for (int j=0; j<COLS; j++) begin
-                i_mat_b[(m*COLS + j)*DATA_W +: DATA_W] = tb_mat_b[m][j];
-              end
-            end
-          endtask
-        
-          task automatic unpack_outputs();
-            for (int r=0; r<ROWS; r++) begin
-              for (int c=0; c<COLS; c++) begin
-                tb_mat_c[r][c] = o_mat[(r*COLS + c)*ACC_W +: ACC_W];
-              end
-            end
-          endtask
-        //==========================================================
-        // Driver tasks
-        //==========================================================
-          task automatic drive_inputs_from_txn();
-            for (int r=0; r<ROWS; r++)
-              for (int k=0; k<K_DIM; k++)
-                tb_mat_a[r][k] = sa.A[r][k];
-        
-            for (int k=0; k<K_DIM; k++)
-              for (int c=0; c<COLS; c++)
-                tb_mat_b[k][c] = sa.B[k][c];
-        
-            pack_inputs();
-          endtask
-          //i_start를 1로 계속 유지하면 IDLE 상태에서 즉시 RUN으로 재시작할 수 있는 
-          //원치않는 trigger가 발생할 위험이 있다.
-          //따라서 1 pulse만 i_start를 넣어주는 함수를 정의한다.
-          task automatic start_pulse_1cycle();
-            @(posedge clk);
-            i_start = 1'b1;
-            @(posedge clk);
-            i_start = 1'b0;
-          endtask
 
-    - 4️⃣ Main 진입 전 driver 정의 
-      - unpacked ↔ packed mapping 함수 2개
-      - constraint random transaction에서 생성된 입력을 tb input과 연결하는 함수 start를 1 cycle pulse 주는 각종 driver utility들을 정의
 
-              //==========================================================
-              // Step 5) main
-              //==========================================================
-              localparam int  NUM_TESTS    = 1000; //최대 testcase 수
-              localparam int  FLUSH_CYCLES = 5;
-              //Skew 주입 종료 후, 내부 pipe에 남아있는 데이터가 끝까지 전달되고
-              //acc_sum이 안정화되도록 0을 더 넣는 구간
-              //경험적으로 5정도로 설정
-              localparam real COV_TARGET   = 100.0;
-              //coverage 목표치, 100이 되면 조기 종료
-            
-              int err_cnt = 0;
-              //testcase 1개에서 발생한 에러 수
-              int err_cnt_total = 0;
-              //전체 누적된 에러 수
-             
-              initial begin
-                @(posedge rst_n);
-                @(posedge clk);
-            
-                $display("==================================================");
-                $display("[TB] systolic_controller_relu Random Verification START");
-                $display("  ROWS=%0d, COLS=%0d, K_DIM=%0d, DATA_W=%0d, ACC_W=%0d, BIAS=%0d",
-                         ROWS, COLS, K_DIM, DATA_W, ACC_W, BIAS);
-                $display("  NUM_TESTS=%0d", NUM_TESTS);
-                $display("==================================================");
-            
-                for (int tc=0; tc<NUM_TESTS; tc++) begin
-                  err_cnt = 0;
-                  
-                  assert(sa.randomize());
-                  cg.sample();
-                  
-                  //sa.A/B → tb_mat_a/b 복사 → pack_inputs()로 i_mat_a/b 세팅
-                  drive_inputs_from_txn();
-                  //golden model calculation
-                  calc_golden_relu();
-            
-                  if (sa.do_start) begin
-                    //1. DUT가 아직 이전 작업 때문에 busy면, idle이 될 때까지 기다렸다가 다음 시작.
-                    if (o_busy) wait(o_busy == 0);
-                    //2. i_start 1 pulse injection
-                    start_pulse_1cycle();
-                    //3. DUT가 done을 1로 올릴 때까지 연산 결과 대기.
-                    wait(o_done == 1);
-                    //4. Flush : 내부 파이프, 출력 레지스터 갱신, 안정화 시간을 주는 역할.
-                    repeat (FLUSH_CYCLES) @(posedge clk);
-                    //5. output : o_mat(flat packed)를 tb_mat_c[r][c](2D)로 풀어 담음.
-                    unpack_outputs();
-            
-                    $display("--------------------------------------------------");
-                    $display("[TB] TestCase %0d (do_start=1) Checking...", tc);
-            
-                    for (int r=0; r<ROWS; r++) begin
-                      for (int c=0; c<COLS; c++) begin
-                        if (tb_mat_c[r][c] !== C_ref[r][c]) begin
-                          err_cnt++;
-                          $display("ERROR C[%0d][%0d]: DUT=%0d | REF=%0d | time=%0t",
-                                   r, c, tb_mat_c[r][c], C_ref[r][c], $time);
-                        end
-                        else begin
-                          if (tb_mat_c[r][c] == '0)
-                            $display("PASS  C[%0d][%0d]: DUT=%0d | REF=%0d | (ReLU) | time=%0t",
-                                     r, c, tb_mat_c[r][c], C_ref[r][c], $time);
-                          else
-                            $display("PASS  C[%0d][%0d]: DUT=%0d | REF=%0d | time=%0t",
-                                     r, c, tb_mat_c[r][c], C_ref[r][c], $time);
-                        end
-                      end
-                    end
-            
-                    if (err_cnt == 0) $display("[TB] RESULT: PASS");
-                    else              $display("[TB] RESULT: FAIL (err=%0d)", err_cnt);
-            
-                    err_cnt_total += err_cnt;
-            
-                  end else begin
-                    $display("[TB] TestCase %0d (do_start=0) -> skip checking", tc);
-                  end
-            
-                  if (cg.get_inst_coverage() >= COV_TARGET) begin
-                    $display("[TB] Coverage reached %0.2f%% at testcase=%0d, time=%0t",
-                             cg.get_inst_coverage(), tc, $time);
-                    break;
-                  end
-                end
-            
-                $display("==================================================");
-                $display("[TB] Simulation Summary");
-                $display("  Total errors   : %0d", err_cnt_total);
-                if (err_cnt_total == 0) $display("  RESULT         : PASS");
-                else                    $display("  RESULT         : FAIL");
-                $display("--------------------------------------------------");
-                $display("[TB] Functional Coverage");
-                $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
-                $display("  do_start   : %0.2f %%", cg.cp_do_start.get_inst_coverage());
-                $display("  A[0][0]    : %0.2f %%", cg.cp_A00.get_inst_coverage());
-                $display("  B[0][0]    : %0.2f %%", cg.cp_B00.get_inst_coverage());
-                $display("==================================================");
-                $finish;
-              end
-            endmodule
 
-    - 5️⃣ Main 
-      - unpacked ↔ packed mapping 함수 2개
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_37.png" width="400"/>
 
-log 값
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <div align="left">
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_38.png" width="400"/>
 
-<div align="left">
-
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_39.png" width="400"/>
-
-Timing Diagram Full View
-
-<div align="left">
-
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_40.png" width="400"/>
-
-<div align="left">
