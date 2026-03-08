@@ -75,6 +75,18 @@
     - 기존 mac_pe.v와 비교한 개선 포인트
       1) signed : fixed-point를 고려한 SIGNED 연산
             - 기존 mac_pe.v는 입력과 연산 경로가 unsigned로 정의되어 있다. 하지만 실제 DNN 연산에서는 activation이나 weight가 음수를 포함하는 경우가 일반적이며, fixed-point 환경에서는 부호 해석이 잘못되면 곱셈 단계부터 결과가 왜곡될 수 있다. 따라서 signed로 정의함으로써 음수 입력 및 가중치가 포함된 경우에도 하드웨어 동작과 수치 해석이 직관적으로 유지되도록 한다.
+      2) DEBUG 매크로를 이용한 디버그 포트 옵션화
+            - PE.v에서는 DEBUG 매크로를 사용해 디버그 포트를 조건부로 노출한다.
+
+                        `ifdef DEBUG ... `endif
+        
+            - 디버그 빌드에서는 곱 결과를 외부에서 관측할 수 있어 검증이 용이하고, 릴리즈 빌드에서는 해당 포트 자체가 제거되어 합성 및 배치 관점에서 더 깔끔한 구조를 유지할 수 있다.
+      1) signed : fixed-point를 고려한 SIGNED 연산
+            - 기존 mac_pe.v는 입력과 연산 경로가 unsigned로 정의되어 있다. 하지만 실제 DNN 연산에서는 activation이나 weight가 음수를 포함하는 경우가 일반적이며, fixed-point 환경에서는 부호 해석이 잘못되면 곱셈 단계부터 결과가 왜곡될 수 있다. 따라서 signed로 정의함으로써 음수 입력 및 가중치가 포함된 경우에도 하드웨어 동작과 수치 해석이 직관적으로 유지되도록 한다.
+      1) signed : fixed-point를 고려한 SIGNED 연산
+            - 기존 mac_pe.v는 입력과 연산 경로가 unsigned로 정의되어 있다. 하지만 실제 DNN 연산에서는 activation이나 weight가 음수를 포함하는 경우가 일반적이며, fixed-point 환경에서는 부호 해석이 잘못되면 곱셈 단계부터 결과가 왜곡될 수 있다. 따라서 signed로 정의함으로써 음수 입력 및 가중치가 포함된 경우에도 하드웨어 동작과 수치 해석이 직관적으로 유지되도록 한다.
+
+
 
 
     - 2️⃣ Input Buffer Latch + <Packed→Unpacked> Mapping 정의
