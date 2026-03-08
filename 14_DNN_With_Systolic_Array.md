@@ -1162,13 +1162,13 @@
 
     - MaxFinder 결과 Result가 모두 0으로 출력되는 문제가 발생하였다. 모든 레이어에 대한 연산 결과가 일치하였지만, 결과가 다르게 나왔다는 의미는 어떠한 제어 신호가 문제가 있는 것으로 초기에 파악하였다.
     
-                                    if (k_cnt == 10) begin
-                                        mf_valid_pulse <= 1; // Start MaxFinder
-                                        state <= DONE;
-                                        o_done_interrupt <= 1;
-                                    end else begin
-                                        k_cnt <= k_cnt + 1;
-                                    end
+                    if (k_cnt == 10) begin
+                        mf_valid_pulse <= 1; // Start MaxFinder
+                        state <= DONE;
+                        o_done_interrupt <= 1;
+                    end else begin
+                        k_cnt <= k_cnt + 1;
+                    end
 
     - 구체적으로는 위 기존 코드에서는 OUTPUT_SCAN에서 MaxFinder 연산을 시작하라는 mf_valid_pulse를 보냄과 동시에, 충분한 타이밍 없이 외부(Testbench)에게 종료를 알리는 o_done_interrupt 신호를 발생시켰다. 이는 하드웨어적으로 MaxFinder가 10개의 입력값들을 비교하고 최종 결과값인 mf_out을 출력 포트에 안정적으로 띄우기 위해서는 comb logic을 통과할 물리적인 시간이 필요할 것이다. 그러나 이 연산 시간이 확보되기도 전에 Testbench가 o_done_interrupt 신호를 감지하고 곧바로 데이터를 읽으려 했기 때문에 문제가 발생하였다.
         
