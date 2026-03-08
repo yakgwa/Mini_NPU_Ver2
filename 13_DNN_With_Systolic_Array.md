@@ -566,9 +566,9 @@
                         write_seq_cnt <= write_seq_cnt + 1;
                     end
                 end
-.
-.
-.
-CALC_L3 / BUFFER_WR_L3 생략
+        .
+        .
+        .
+        CALC_L3 / BUFFER_WR_L3 생략
 
 
