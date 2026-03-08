@@ -36,7 +36,34 @@
     - 🚀 [개선 방안] Testbench 모니터링 포인트 수정 및 데이터 정합성 검증
       - 초기 시뮬레이션 단계에서 발생한 문제는 TB 내 신호 Observation Point가 부적절한 것으로 판단되었다. 최초 검증 코드는 상위 모듈인 Weight_Bank의 출력 인터페이스(wire 타입)를 모니터링하였으나, 해당 신호는 현재 활성화된 뉴런의 출력값만을 전달하는 연결선일 뿐 데이터를 저장하는 공간이 아니었다. 특히, 선언된 와이어 배열의 인덱스 범위를 초과하여 접근함으로써 시뮬레이터가 유효하지 않은 신호를 반환한 것으로 분석되었다. 이에 대해 RTL Hierarchy를 파악하여 Sub-instantiation인 Weight_Memory 인스턴스 내부 reg mem에 직접 접근하여 해결하였다.
 
-
+        NPU_Top
+        │
+        ├─ Data_Skewing (ds)
+        │  └─ [Internal Shift Registers for Row/Col skewing]
+        │
+        ├─ Systolic_Array (sa)
+        │  └─ pe_systolic_cell [4][4]  (16 instances)
+        │     ├─ a_reg, b_reg (1-cycle pipeline registers)
+        │     └─ acc (accumulator)
+        │
+        ├─ Weight_Bank (wb)
+        │  └─ Weight_Memory [4]  (4 instances, one per column)
+        │     └─ RAM blocks initialized from MIF files
+        │
+        ├─ Bias_Bank (bb)
+        │  └─ Bias_Memory [4]  (4 instances)
+        │     └─ RAM blocks initialized from MIF files
+        │
+        ├─ Activation_Unit (au)
+        │  ├─ Sig_ROM (sig_inst)
+        │  │  └─ ROM[1024]  (Sigmoid lookup table)
+        │  └─ ReLU (relu_inst)
+        │
+        ├─ Unified_Buffer (ub)
+        │  └─ Dual-port SRAM [128]  (4 read ports, 1 write port)
+        │
+        └─ maxFinder [4]  (mf_inst_0~3)
+           └─ Combinational max-finding logic
 
 
 
