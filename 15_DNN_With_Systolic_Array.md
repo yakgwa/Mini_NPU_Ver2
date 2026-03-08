@@ -299,7 +299,18 @@ Proposed Model : 10000 Sample Accuracy
 
 ### Performance Table (at fclk=100MHz)
 
-
+|항목|Reference|Proposed|Improvement|
+|:---:|:---:|:---:|:---:|
+|**LUT**|**7,785**|**104**|**▼ 98.66% (약 75배 감소)**|
+|**LUTRAM**|**2**|**1**|**▼ 50.00%**|
+|**FF**|**4,317**|**90**|**▼ 97.92% (약 48배 감소)**|
+|**Total Power (W)**|**1.893 W**|**1.716 W**|**▼ 9.35%**|
+|**Dynamic Power (W)**|**1.742 W**|**1.572 W**|**▼ 9.76%**|
+|**Maximum Frequency**|**115.3 MHz**|**159.1 MHz**|**▲ 37.99%**|
+|**Timing Slack (WNS)**|**1.329 ns**|**3.716 ns**|**▼ 약 1.884배**|
+|**Latency (per Image)**|**9,280 ns**|**17,482 ns**|**▲ 179% (Timing Maring 확보)**|
+|**Throughput (IPS)**|**107,758 img/sec**|**57,200 img/sec**|**▼ 약 1.884배**|
+|**Inference Accuracy**|**96.32%**|**96.32%**|**동일 (손실 없음)**|
 
 - Throughput 계산 : 1초(1,000,000,000 ns) / 1장 처리 시간 (9,280 ns) = 107,758 장/초
 - 4 x 1초(1,000,000,000 ns) / 4장 처리 시간 (69,930 ns) = 57,200 장/초
