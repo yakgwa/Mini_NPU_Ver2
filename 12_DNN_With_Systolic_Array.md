@@ -435,5 +435,175 @@
     - ⚠️ 단, overflow는 i_in[15:12]가 기준이지만, i_in[11]를 포함한 보수적 saturation 정책을 사용
     - Overflow가 없을 때는 출력 비트를 선택한다.
       - o_out <= i_in[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → o_out = i_in[11:4]
-    - 정수부 위치를 기준으로 비트 정렬(alignment) 및 단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지한다. LSB(i_in[3:0])는 fixed-point의 소수부에 해당하므로 버린다. 
+    - 정수부 위치를 기준으로 비트 정렬(alignment) 및 단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지한다. LSB(i_in[3:0])는 fixed-point의 소수부에 해당하므로 버린다.
+ 
+        module Sig_ROM #(parameter inWidth=10, dataWidth=8) (
+            input                   i_clk,
+            input   [inWidth-1:0]   i_in,
+            output  [dataWidth-1:0] o_out
+            );
+            
+            reg [dataWidth-1:0] mem [2**inWidth-1:0];
+            reg [inWidth-1:0] y;
+        	
+        	initial
+        	begin
+        		$readmemb("sigContent.mif",mem);
+        	end
+            
+            always @(posedge i_clk)
+            begin
+                if($signed(i_in) >= 0)
+                    y <= i_in+(2**(inWidth-1));
+                else 
+                    y <= i_in-(2**(inWidth-1));      
+            end
+            
+            assign o_out = mem[y];
+        endmodule      
 
+    - 마찬가지로 Reference Model 코드 분석 시 꼼꼼하게 분석한 부분들을 다시 한 번 짚어보면 sigmoid 함수 자체는 지수함수 및 나눗셈이 필요하기 때문에 다음과 같이 ROM(LUT) 기반으로 근사한다.
+    - $readmemb로 읽어 ROM을 초기화 할 때, LUT의 값들을 미리 계산해 파일로 저장해둔 sigContent.mif을 사용한다. 여기서 새롭게 등장하는 parameter인 inWidth(=sigmoidSize=10)은 입력 폭이 아닌, LUT 해상도를 의미한다. 예컨대, sigmoidSize = 10이라면, 주소 개수 = 2^10 = 1024이므로, ROM 엔트리 = 1024개가 되는 것이다.
+    - Sig_ROM 내부 구조는 다음과 같다.
+      - ROM 배열 : reg [dataWidth-1:0] mem [2**inWidth-1:0];
+      - 주소 레지스터 : reg [inWidth-1:0] y;     
+    - Sig_ROM에서 주소(y) 만드는 방식은 우선 입력 i_in(signed)를 ROM 주소 y (unsigned)로 매핑한다.
+
+           if($signed(i_in) >= 0) y <= i_in + (2**(inWidth-1)); 
+           else y <= i_in - (2**(inWidth-1)); end assign out = mem[y]; 
+
+    - signed 입력 i_in를 그대로 쓰면 음수 주소가 나오므로, ± 2^(inWidth-1) 만큼 이동시켜 중앙을 0 근처로 맞추는(offset) 방식을 쓴다.
+
+### maxFinder.v - Reference Model에서 작성한 DUT와 동일
+
+- DUT
+
+        module maxFinder #(parameter numInput=10,parameter inputWidth=16)(
+            input                               i_clk,
+            input [(numInput*inputWidth)-1:0]   i_data,
+            input                               i_valid,
+            output reg [31:0]                   o_data,
+            output reg                          o_data_valid
+            );
+        
+            reg [inputWidth-1:0] maxValue;
+            reg [(numInput*inputWidth)-1:0] inDataBuffer;
+            integer counter;
+        
+            always @(posedge i_clk) begin
+                o_data_valid <= 1'b0;
+                if(i_valid)
+                begin
+                    maxValue <= i_data[inputWidth-1:0];
+                    counter <= 1;
+                    inDataBuffer <= i_data;
+                    o_data <= 0;
+                end
+                else if(counter == numInput)
+                begin
+                    counter <= 0;
+                    o_data_valid <= 1'b1;
+                end
+                else if(counter != 0)
+                begin
+                    counter <= counter + 1;
+                    if(inDataBuffer[counter*inputWidth+:inputWidth] > maxValue)
+                    begin
+                        maxValue <= inDataBuffer[counter*inputWidth+:inputWidth];
+                        o_data <= counter;
+                    end
+                end
+            end
+        endmodule
+
+    - maxFinder는 최종적으로 inputWidth=16의 입력 비트 폭을 가진, Layer3의 뉴런 개수인 numInput=10이 packed array [(numInput*inputWidth)-1:0] i_data로 numInput개 입력이 한 번에 버스 형태로 들어오게 된다. 자세한 설명은 이전 Reference Model 코드 분석에서 확인할 수 있다
+
+### Activation_Unit.v
+
+- DUT
+
+        `timescale 1ns / 1ps
+        `include "include.v"
+        
+        module Activation_Unit #(
+            parameter dataWidth = 8
+            )(
+            input                        i_clk,
+            input      [2*dataWidth-1:0] i_psum,   //MUL + ADD (가중합)
+            input      [2*dataWidth-1:0] i_bias,   //bias
+            input                        i_actsel, //Act Func Select Signal (0:sig, 1:ReLU)
+            output reg [dataWidth-1:0]   o_out     //Act Func Output
+            );
+        /*
+        주의!!
+        Activation_Unit에서 사용할 Bias는 결국 추후 설명할 Bias_Bank에서 가져오므로,
+        그 모듈에서 8-bit bias를 16-bit로 확장할 때 좌측 시프트를 수행함.
+        따라서 사용할 Bias는 이미 {bias_val, 8'b0} 형태이므로
+        여기서 다시 좌측 시프트를 수행하면,
+        {i_bias[15:0], 8'b0} = 24-bit → 하위 16-bit 잘림 → bias = 0
+        항상 Bias=0이 되어버린다.
+        따라서 bias = i_bias (이미 Bias_Bank에서 시프트 완료)
+        */
+            //bias : fixed-point Quantization 반영은
+            wire [2*dataWidth-1:0] bias;
+            assign bias = i_bias; 
+            
+            //bias_add_res  : bias를 더한 결과를 저장할 신호 (guard bit +1)
+            //sum_saturated : Act Func의 입력 값이 저장될 레지스터 
+            wire [2*dataWidth:0]   bias_add_res;
+            reg  [2*dataWidth-1:0] sum_saturated;
+            
+            //i_psum + i_bias
+            assign bias_add_res = $signed(i_psum) + $signed(bias);
+            
+            //MSB guard bit를 버리고 나머지 비트만 기재하여 sum_saturated에 저장
+            always @(*) begin
+                // 포화 처리: BiasAdd가 양수일 경우 포화 처리, 음수일 경우 포화 처리
+                if(!bias[2*dataWidth-1] & !i_psum[2*dataWidth-1] & bias_add_res[2*dataWidth-1]) begin
+                    // 양수 오버플로우: 더한 결과가 양수에서 오버플로우 되면, sum을 최댓값으로 설정
+                    sum_saturated[2*dataWidth-1]   <= 1'b0;
+                    sum_saturated[2*dataWidth-2:0] <= {2*dataWidth-1{1'b1}};
+                end else if (bias[2*dataWidth-1] & i_psum[2*dataWidth-1] & !bias_add_res[2*dataWidth-1]) begin
+                    // 음수 오버플로우: 더한 결과가 음수에서 오버플로우 되면, sum을 최솟값으로 설정
+                    sum_saturated[2*dataWidth-1]   <= 1'b1;
+                    sum_saturated[2*dataWidth-2:0] <= {2*dataWidth-1{1'b0}};
+                end else begin
+                    // 오버플로우가 발생하지 않으면 정상적으로 더한 값을 저장
+                    sum_saturated <= bias_add_res;
+                end
+            end
+            
+            //sig_out  : Sigmoid Output Store
+            //relu_out : ReLU Output Store
+            wire [dataWidth-1:0] sig_out;
+            wire [dataWidth-1:0] relu_out;
+            
+            //Sigmoid Instantiation
+            Sig_ROM #(
+                .inWidth(`sigmoidSize), 
+                .dataWidth(dataWidth)
+            ) sig_inst (
+                .i_clk(i_clk),
+                .i_in(sum_saturated[2*dataWidth-1 -: `sigmoidSize]), 
+                .o_out(sig_out)
+            );
+            
+            //ReLU Instantiation
+            ReLU #(
+                .dataWidth(dataWidth),
+                .weightIntWidth(`weightIntWidth)
+            ) relu_inst (
+                .i_clk(i_clk),
+                .i_in(sum_saturated),
+                .o_out(relu_out)
+            );
+        
+            always @(*) begin
+                if (i_actsel == 1'b0) 
+                    o_out = sig_out;
+                else 
+                    o_out = relu_out;
+            end
+        endmodule
+
+    - Activation Function은 주어진 가중합과 바이어스를 더한 뒤, 선택된 활성화 함수(Sigmoid/ReLU)를 적용하여 최종 출력을 생성하는 기능을 수행한다. 입력으로 들어오는 psum_in (MUL + ADD된 가중합)과 bias_in (바이어스)을 더한 후, Activation Function에 적용하기 전에 이를 saturated value로 변환한다.
