@@ -323,8 +323,8 @@
 
     - 하지만, 여기서 간과한 점이 있다. 현재는 마지막 데이터(Layer1 Neuron 0~3)가 모두 0이라 결과에 문제가 없어 보이지만, 이는 데이터 특성에 의해 가려진 것일 뿐 실질적인 타이밍 설계에는 오류가 있다. 구체적으로 로그를 확인한 결과, 다음 두 가지 지연 요소가 종료 시점에 제대로 반영되지 않았음을 확인했다.
  
-    1) Pipelining Delay: pe_systolic_cell.v 내부의 a_reg를 거치며 발생하는 1 Cycle 지연.
-    2) Data Skew: 각 행(Row)마다 데이터가 순차적으로 밀려서 도달하는 Skew Delay. 설정된 종료 시점(Cycle 791)은 Corner를 커버하기에 부족하므로 종료 타이밍을 재설계할 필요가 있다.
+      1) Pipelining Delay: pe_systolic_cell.v 내부의 a_reg를 거치며 발생하는 1 Cycle 지연.
+      2) Data Skew: 각 행(Row)마다 데이터가 순차적으로 밀려서 도달하는 Skew Delay. 설정된 종료 시점(Cycle 791)은 Corner를 커버하기에 부족하므로 종료 타이밍을 재설계할 필요가 있다.
 
 
 
