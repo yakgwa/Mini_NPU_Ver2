@@ -1003,11 +1003,33 @@
                 end
             end
 
+    - DUT의 FSM State가 바뀔 때마다 감지하여 로그를 출력시킨다.
+      
+            if (dut.state !== prev_state) begin
+                $fdisplay(log_fd, "############ STATE CHANGE: %0s --> %0s ...", ...);
+                prev_state <= dut.state;
+            end
 
+    - 계산 중(CALC_L1, L2, L3)이거나 결과 저장 중(BUFFER_WR_L1, L2, L3)일 때, 로그를 출력시킨다.
 
+            if ((dut.state == 1 || dut.state == 3 || dut.state == 5) && dut.pe_en) begin
+                log_matrix_view();
+            end
+            ---
+            if (dut.state == 2 || dut.state == 4 || dut.state == 6) begin
+                log_buffer_write();
+            end
 
+    - Input Data Feeder : TB가 DUT에게 데이터를 먹여주는 드라이버 부분을 추가로 설계한다.
+    - Layer2, 3는 내부 버퍼 값을 사용하기 떄문에 주입할 필요가 없다.
 
+            if (dut.state == 1) begin  // CALC_L1 (첫 번째 레이어 계산 중일 때)
+                if (dut.k_cnt < 784) begin
+                    // 4장의 이미지를 병렬로 합쳐서 한 번에 주입 (Batch Processing)
+                    input_pixels <= {img_mem_3[dut.k_cnt], img_mem_2[dut.k_cnt], 
+                                     img_mem_1[dut.k_cnt], img_mem_0[dut.k_cnt]};
+                    input_valid <= 1;
+                end ...
+            end
 
-
-
-
+- 4️⃣ Main
