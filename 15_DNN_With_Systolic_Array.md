@@ -221,17 +221,31 @@ Proposed Model : Area
 
 <div align="left">
 
+- 현재 제안 모델은 AXI Interface가 구현되지 않은 상태에서, 순수 RTL 로직만 합성된 결과에 해당한다. 이 경우 설계는 내부 레지스터 기반 연산 구조만을 사용하며, 대용량 데이터를 저장하거나 버퍼링하기 위한 메모리 블록을 포함하지 않는다. 따라서 합성 과정에서 BRAM 사용량이 0으로 나타난 것이다. 반면, I/O 사용량이 65%로 매우 높게 나타난 것은 설계 구조상 외부 포트로 노출된 신호 수가 많기 때문이다. AXI가 아직 연결되지 않은 상황에서는 대부분 신호가 top module의 개별 포트 형태로 직접 외부에 연결된다. FPGA에서 이러한 top-level 포트는 물리적 패키지 핀으로 매핑되며, Vivado는 이를 I/O 사용량으로 집계한다.
 
+### POWER​
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_74.png" width="400"/>
 
+<div align="left">
 
+- 아래의 Reference Model의 총 On-Chip Power는 1.893W로 나타났다. 위 제시된 논문의 내용과 역시 다소 오차가 존재하지만, 이는 설정 차이에 기인한 것으로 분석된다. 이 중 Dynamic Power 1.742W로 전체의 92%를 차지하며, Static Power 0.151W로 8% 수준이다. 동적 전력의 세부 항목 중 PS7으로 1.572W, 즉 동적 전력의 약 90%에 해당한다. 반면, PL에 해당하는 합산 전력은 약 0.17W 수준에 해당한다. 리포트에 표시된 Confidence level이 Low로 나타난 점은 전력 추정이 정확한 시뮬레이션 기반 토글 데이터(SAIF/VCD)가 아니라 vectorless 분석에 기반하여 산출되어 신뢰도는 다소 낮을 수 있다. 
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_75.png" width="400"/>
 
+Reference Model : Power
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_76.png" width="400"/>
 
+Proposed Model : Power
 
+<div align="left">
 
+### Performance : Timing & Maximum Frequency
+
+- Reference Model의 100MHz Clock Frequency에서 Setup, Hold, Pulse Width 세 가지 조건 모두 충족되었음을 확인할 수 있다. 먼저 Setup 분석에서 WNS이 1.329ns로 나타났으며, TNS는 0.000ns, Failing Endpoints 역시 0으로 보고되어, 모든 경로가 요구된 클럭 주기 내에 안정적으로 데이터 전이를 완료하고 있음을 의미한다. 특히 WNS가 양수라는 점은 클럭 주기 대비 여유 마진이 존재함을 보여준다. 최대 동작 주파수는 이 Setup Slack을 이용하여 계산할 수 있다. 일반적으로 WNS는 '요구 클럭 주기 - 실제 경로 지연'의 차이를 의미하므로, 현재 설계에서 설정한 클럭 주기를 T라 하면, 다음과 같이 계산할 수 있다.
 
 
 
