@@ -335,15 +335,20 @@
 <div align="left">
 
 - 최종 데이터 도달 및 연산 종료 시점 분석 결과, Row/Col 3의 마지막 값이 PE에 도달하는 시점은 Cycle 790으로 확인되었다. MAC 연산까지 고려하면 각 Col별 종료 시점은 다음과 같이 순차적으로 지연된다.
-
     - Col 0: Cycle 792
+    - Col 0: Cycle 793
+    - Col 0: Cycle 794
+    - Col 3: Cycle 795 (최종 종료)
 
+- 이를 바탕으로 CALC_L1 상태의 카운터(k_cnt) 종료 조건을 재설정하였다. (Idle 2 cycle 제외 기준)
 
+        k_cnt == cur_input_len + 3*(ARRAY_ROW - 1)
+        // 784 + 3*(4 - 1) = 784 + 3*3 = 784 + 9 = 793
 
+- ​추가 문제 발생: Data Skewing의 입력 조기 차단 카운터 조건을 확장했음에도 불구하고, 마지막 데이터(강제로 0이 아닌 값 입력) 결과에 반영되지 않는 문제가 발생했다. 원인은 Data_Skewing 모듈로 들어가는 입력 신호(sys_row_in, sys_col_in)의 Valid 조건에 있었다.
 
-
-
-
+            assign sys_row_in = (k_cnt < cur_input_len) ? raw_input_data : {ARRAY_ROW*dataWidth{1'b0}};
+            assign sys_col_in = (k_cnt < cur_input_len) ? raw_weight_data : {ARRAY_COL*dataWidth{1'b0}};
 
 
 
