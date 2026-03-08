@@ -116,58 +116,57 @@
 - DUT
 
         module pe_systolic_cell #(
-        parameter integer dataWidth = 8
-        )(
-        //본인 연산용 데이터 (왼쪽/위쪽에서 옴)
-        input  wire signed [dataWidth-1:0]    i_a,
-        input  wire signed [dataWidth-1:0]    i_b,
-        //옆/아래 PE로 전달할 데이터 (Registering -> Data Skew 용)
-        output wire signed [dataWidth-1:0]    o_a,
-        output wire signed [dataWidth-1:0]    o_b,
-        //Control
-        input  wire                           i_clk,
-        input  wire                           i_rst,    
-        input  wire                           i_en,
-        //Result
-        output wire signed [2*dataWidth-1:0]  o_debugmul, 
-        output wire signed [2*dataWidth-1:0]  o_psum  
+            parameter integer dataWidth = 8
+            )(
+            //본인 연산용 데이터 (왼쪽/위쪽에서 옴)
+            input  wire signed [dataWidth-1:0]    i_a,
+            input  wire signed [dataWidth-1:0]    i_b,
+            //옆/아래 PE로 전달할 데이터 (Registering -> Data Skew 용)
+            output wire signed [dataWidth-1:0]    o_a,
+            output wire signed [dataWidth-1:0]    o_b,
+            //Control
+            input  wire                           i_clk,
+            input  wire                           i_rst,    
+            input  wire                           i_en,
+            //Result
+            output wire signed [2*dataWidth-1:0]  o_debugmul, 
+            output wire signed [2*dataWidth-1:0]  o_psum  
         );
-
-        // 1. Data Passing을 위한 Input Registering
-        // 입력을 1클럭 잡고 있다가 옆으로 넘겨줌
-        reg signed [dataWidth-1:0] a_reg;
-        reg signed [dataWidth-1:0] b_reg;
-
-        assign o_a = a_reg;
-        assign o_b = b_reg;
-
-        always @(posedge i_clk) begin
-           if (i_rst) begin
-             a_reg <= 0;
-             b_reg <= 0;
-        end else if (i_en) begin
-            a_reg <= i_a;
-            b_reg <= i_b;
-        end
-    end
-
-    // PE Instantiation
-    // 실제 MAC 수행. 입력으로 Register된 값을 넣음.
-    PE #(
-        .dataWidth      (dataWidth)
-    ) dut (
-        .i_clk   (i_clk),
-        .i_rst   (i_rst),  
-        .i_en    (i_en),      
-        .i_a     (a_reg),   // Register된 값을 연산에 사용
-        .i_b     (b_reg),   // Register된 값을 연산에 사용
-        .o_psum  (o_psum)
-        `ifdef DEBUG
-        , .o_debugmul (o_debugmul) 
-        `endif
-    );
-endmodule
-
+        
+            // 1. Data Passing을 위한 Input Registering
+            // 입력을 1클럭 잡고 있다가 옆으로 넘겨줌
+            reg signed [dataWidth-1:0] a_reg;
+            reg signed [dataWidth-1:0] b_reg;
+        
+            assign o_a = a_reg;
+            assign o_b = b_reg;
+        
+            always @(posedge i_clk) begin
+                if (i_rst) begin
+                    a_reg <= 0;
+                    b_reg <= 0;
+                end else if (i_en) begin
+                    a_reg <= i_a;
+                    b_reg <= i_b;
+                end
+            end
+        
+            // PE Instantiation
+            // 실제 MAC 수행. 입력으로 Register된 값을 넣음.
+            PE #(
+                .dataWidth      (dataWidth)
+            ) dut (
+                .i_clk   (i_clk),
+                .i_rst   (i_rst),  
+                .i_en    (i_en),      
+                .i_a     (a_reg),   // Register된 값을 연산에 사용
+                .i_b     (b_reg),   // Register된 값을 연산에 사용
+                .o_psum  (o_psum)
+                `ifdef DEBUG
+                , .o_debugmul (o_debugmul) 
+                `endif
+            );
+        endmodule
 
 
 
