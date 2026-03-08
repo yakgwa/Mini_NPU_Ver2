@@ -383,6 +383,187 @@
                 end
               endtask
 
+    - 3️⃣ DUT Instantiation + Clock/Reset 생성 + Golden Model & Checker
+      - Golden Model은 task automatic으로 calc_golden_relu 함수를 생성하여 Bias + ReLu의 PPU가 모두 적용된 최종적인 C_ref의 unpacked array를 생성시킨다.
+
+              covergroup cg_ctrl;
+                cp_do_start : coverpoint sa.do_start { bins b0={0}; bins b1={1}; }
+            
+                cp_A00 : coverpoint sa.A[0][0] {
+                  bins zero={0}; 
+                  bins one={1}; 
+                  bins max={(2**DATA_W)-1};
+                  bins mid={[2:(2**DATA_W)-2]};
+                }
+            
+                cp_B00 : coverpoint sa.B[0][0] {
+                  bins zero={0}; 
+                  bins one={1}; 
+                  bins max={(2**DATA_W)-1};
+                  bins mid={[2:(2**DATA_W)-2]};
+                }
+              endgroup
+              cg_ctrl cg = new();
+
+    - 4️⃣ Functional Coverage
+
+        //==========================================================
+        // Packed ↔ Unpacked Array Mapping tasks
+        //==========================================================
+          task automatic pack_inputs();
+            i_mat_a = '0;
+            i_mat_b = '0;
+        
+            for (int i=0; i<ROWS; i++) begin
+              for (int k=0; k<K_DIM; k++) begin
+                i_mat_a[(i*K_DIM + k)*DATA_W +: DATA_W] = tb_mat_a[i][k];
+              end
+            end
+        
+            for (int m=0; m<K_DIM; m++) begin
+              for (int j=0; j<COLS; j++) begin
+                i_mat_b[(m*COLS + j)*DATA_W +: DATA_W] = tb_mat_b[m][j];
+              end
+            end
+          endtask
+        
+          task automatic unpack_outputs();
+            for (int r=0; r<ROWS; r++) begin
+              for (int c=0; c<COLS; c++) begin
+                tb_mat_c[r][c] = o_mat[(r*COLS + c)*ACC_W +: ACC_W];
+              end
+            end
+          endtask
+        //==========================================================
+        // Driver tasks
+        //==========================================================
+          task automatic drive_inputs_from_txn();
+            for (int r=0; r<ROWS; r++)
+              for (int k=0; k<K_DIM; k++)
+                tb_mat_a[r][k] = sa.A[r][k];
+        
+            for (int k=0; k<K_DIM; k++)
+              for (int c=0; c<COLS; c++)
+                tb_mat_b[k][c] = sa.B[k][c];
+        
+            pack_inputs();
+          endtask
+          //i_start를 1로 계속 유지하면 IDLE 상태에서 즉시 RUN으로 재시작할 수 있는 
+          //원치않는 trigger가 발생할 위험이 있다.
+          //따라서 1 pulse만 i_start를 넣어주는 함수를 정의한다.
+          task automatic start_pulse_1cycle();
+            @(posedge clk);
+            i_start = 1'b1;
+            @(posedge clk);
+            i_start = 1'b0;
+          endtask
+
+    - 4️⃣ Main 진입 전 driver 정의 
+      - unpacked ↔ packed mapping 함수 2개
+      - constraint random transaction에서 생성된 입력을 tb input과 연결하는 함수 start를 1 cycle pulse 주는 각종 driver utility들을 정의
+
+              //==========================================================
+              // Step 5) main
+              //==========================================================
+              localparam int  NUM_TESTS    = 1000; //최대 testcase 수
+              localparam int  FLUSH_CYCLES = 5;
+              //Skew 주입 종료 후, 내부 pipe에 남아있는 데이터가 끝까지 전달되고
+              //acc_sum이 안정화되도록 0을 더 넣는 구간
+              //경험적으로 5정도로 설정
+              localparam real COV_TARGET   = 100.0;
+              //coverage 목표치, 100이 되면 조기 종료
+            
+              int err_cnt = 0;
+              //testcase 1개에서 발생한 에러 수
+              int err_cnt_total = 0;
+              //전체 누적된 에러 수
+             
+              initial begin
+                @(posedge rst_n);
+                @(posedge clk);
+            
+                $display("==================================================");
+                $display("[TB] systolic_controller_relu Random Verification START");
+                $display("  ROWS=%0d, COLS=%0d, K_DIM=%0d, DATA_W=%0d, ACC_W=%0d, BIAS=%0d",
+                         ROWS, COLS, K_DIM, DATA_W, ACC_W, BIAS);
+                $display("  NUM_TESTS=%0d", NUM_TESTS);
+                $display("==================================================");
+            
+                for (int tc=0; tc<NUM_TESTS; tc++) begin
+                  err_cnt = 0;
+                  
+                  assert(sa.randomize());
+                  cg.sample();
+                  
+                  //sa.A/B → tb_mat_a/b 복사 → pack_inputs()로 i_mat_a/b 세팅
+                  drive_inputs_from_txn();
+                  //golden model calculation
+                  calc_golden_relu();
+            
+                  if (sa.do_start) begin
+                    //1. DUT가 아직 이전 작업 때문에 busy면, idle이 될 때까지 기다렸다가 다음 시작.
+                    if (o_busy) wait(o_busy == 0);
+                    //2. i_start 1 pulse injection
+                    start_pulse_1cycle();
+                    //3. DUT가 done을 1로 올릴 때까지 연산 결과 대기.
+                    wait(o_done == 1);
+                    //4. Flush : 내부 파이프, 출력 레지스터 갱신, 안정화 시간을 주는 역할.
+                    repeat (FLUSH_CYCLES) @(posedge clk);
+                    //5. output : o_mat(flat packed)를 tb_mat_c[r][c](2D)로 풀어 담음.
+                    unpack_outputs();
+            
+                    $display("--------------------------------------------------");
+                    $display("[TB] TestCase %0d (do_start=1) Checking...", tc);
+            
+                    for (int r=0; r<ROWS; r++) begin
+                      for (int c=0; c<COLS; c++) begin
+                        if (tb_mat_c[r][c] !== C_ref[r][c]) begin
+                          err_cnt++;
+                          $display("ERROR C[%0d][%0d]: DUT=%0d | REF=%0d | time=%0t",
+                                   r, c, tb_mat_c[r][c], C_ref[r][c], $time);
+                        end
+                        else begin
+                          if (tb_mat_c[r][c] == '0)
+                            $display("PASS  C[%0d][%0d]: DUT=%0d | REF=%0d | (ReLU) | time=%0t",
+                                     r, c, tb_mat_c[r][c], C_ref[r][c], $time);
+                          else
+                            $display("PASS  C[%0d][%0d]: DUT=%0d | REF=%0d | time=%0t",
+                                     r, c, tb_mat_c[r][c], C_ref[r][c], $time);
+                        end
+                      end
+                    end
+            
+                    if (err_cnt == 0) $display("[TB] RESULT: PASS");
+                    else              $display("[TB] RESULT: FAIL (err=%0d)", err_cnt);
+            
+                    err_cnt_total += err_cnt;
+            
+                  end else begin
+                    $display("[TB] TestCase %0d (do_start=0) -> skip checking", tc);
+                  end
+            
+                  if (cg.get_inst_coverage() >= COV_TARGET) begin
+                    $display("[TB] Coverage reached %0.2f%% at testcase=%0d, time=%0t",
+                             cg.get_inst_coverage(), tc, $time);
+                    break;
+                  end
+                end
+            
+                $display("==================================================");
+                $display("[TB] Simulation Summary");
+                $display("  Total errors   : %0d", err_cnt_total);
+                if (err_cnt_total == 0) $display("  RESULT         : PASS");
+                else                    $display("  RESULT         : FAIL");
+                $display("--------------------------------------------------");
+                $display("[TB] Functional Coverage");
+                $display("  TOTAL      : %0.2f %%", cg.get_inst_coverage());
+                $display("  do_start   : %0.2f %%", cg.cp_do_start.get_inst_coverage());
+                $display("  A[0][0]    : %0.2f %%", cg.cp_A00.get_inst_coverage());
+                $display("  B[0][0]    : %0.2f %%", cg.cp_B00.get_inst_coverage());
+                $display("==================================================");
+                $finish;
+              end
+            endmodule
 
 
 
