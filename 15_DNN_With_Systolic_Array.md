@@ -68,9 +68,20 @@
 
 <div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_64.png" width="400"/>
 
+<div align="left">
 
+    - axis_in_data[7:0]
+    - axis_in_data_valid
+    - axis_in_data_ready
+    - intr
 
+- 본 논문의 시스템은 PS 영역에서 ARM CPU가 처리할 데이터를 DDR Memory에 올려놓고, PS(CPU)가 DMA Controller에게 명령하여 FPGA에게 메모리를 전달하라는 명령을 한다.(편의상 DMA는 구현하지 않고 CPU 블록 자체만 켜져 있는 상태로 PPA 분석 예정)
+- 명령을 받은 DMA는 메모리에서 데이터를 읽어서 AXI Stream을 통해 FPGA에게 전달해준다. 
+- 이렇게 받은 데이터를 PL(FPGA)에서 실시간 처리한다.
+- 처리한 결과는 다시 AXI Stream을 통해 DMA로 보낸다.
+- DMA가 결과값을 다시 DDR Memory에 쓰고, CPU에게 Interrupt 신호를 보낸다.
 
 
 
