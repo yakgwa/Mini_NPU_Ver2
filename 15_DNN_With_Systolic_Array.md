@@ -307,8 +307,8 @@ Proposed Model : 10000 Sample Accuracy
 |**Total Power (W)**|**1.893 W**|**1.716 W**|**▼ 9.35%**|
 |**Dynamic Power (W)**|**1.742 W**|**1.572 W**|**▼ 9.76%**|
 |**Maximum Frequency**|**115.3 MHz**|**159.1 MHz**|**▲ 37.99%**|
-|**Timing Slack (WNS)**|**1.329 ns**|**3.716 ns**|**▼ 약 1.884배**|
-|**Latency (per Image)**|**9,280 ns**|**17,482 ns**|**▲ 179% (Timing Maring 확보)**|
+|**Timing Slack (WNS)**|**1.329 ns**|**3.716 ns**|**▲ 179% (Timing Maring 확보)**|
+|**Latency (per Image)**|**9,280 ns**|**17,482 ns**|**▼ 약 1.884배**|
 |**Throughput (IPS)**|**107,758 img/sec**|**57,200 img/sec**|**▼ 약 1.884배**|
 |**Inference Accuracy**|**96.32%**|**96.32%**|**동일 (손실 없음)**|
 
