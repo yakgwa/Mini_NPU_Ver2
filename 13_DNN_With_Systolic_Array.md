@@ -755,12 +755,60 @@
         );
         always #5 clk = ~clk;
 
+- 2️⃣ Function / Task Definition
 
+        // ======================================================================================
+        // State Name Function
+        // ======================================================================================
+       function string get_state_name(input [3:0] st);
+           case (st)
+               0: return "IDLE";
+               1: return "CALC_L1";
+               2: return "BUFFER_WR_L1";
+               3: return "CALC_L2";
+               4: return "BUFFER_WR_L2";
+               5: return "CALC_L3";
+               6: return "BUFFER_WR_L3";
+               7: return "OUTPUT_SCAN";
+               8: return "DONE";
+               default: return "UNKNOWN";
+           endcase
+       endfunction
 
+        // ======================================================================================
+        // Task: Log Matrix Visualization
+        // ======================================================================================
+        task log_matrix_view;
+            begin
+                // --- Header ---
+                $fdisplay(log_fd, "");
+                $fdisplay(log_fd, "====== [Cycle:%5d] State: %0s | k_cnt:%4d | Group:%2d | pe_en:%b | pe_rst:%b ======",
+                    cycle_cnt, get_state_name(dut.state), dut.k_cnt, dut.group_cnt, dut.pe_en, dut.pe_rst);
+    
+                // --- Raw Data (Memory readout, before skewing) ---
+                $fdisplay(log_fd, "  [Raw Data (MUX Output)]");
+                $fdisplay(log_fd, "    Row: R0=%4d  R1=%4d  R2=%4d  R3=%4d",
+                    $signed(dut.sys_row_in[1*dataWidth-1 -: dataWidth]),
+                    $signed(dut.sys_row_in[2*dataWidth-1 -: dataWidth]),
+                    ..
+                $fdisplay(log_fd, "    Col: C0=%4d  C1=%4d  C2=%4d  C3=%4d",
+                    $signed(dut.sys_col_in[1*dataWidth-1 -: dataWidth]),
+                    $signed(dut.sys_col_in[2*dataWidth-1 -: dataWidth]),
+                    ..
+    
+                // --- Skewed Data (after Data_Skewing, actual array edge values) ---
+                $fdisplay(log_fd, "  [Skewed Data (Array Edge)]");
+                $fdisplay(log_fd, "    Row: R0=%4d  R1=%4d  R2=%4d  R3=%4d",
+                    $signed(dut.skewed_row_data[1*dataWidth-1 -: dataWidth]),
+                    ..
+                $fdisplay(log_fd, "    Col: C0=%4d  C1=%4d  C2=%4d  C3=%4d",
+                    $signed(dut.skewed_col_data[1*dataWidth-1 -: dataWidth]),
+                    ..
 
-
-
-
+    - 먼저 Raw Data와 Skewed Data를 분리하여 검증한다.
+    - 메모리나 버퍼에서 방금 읽어와 MUX를 통과한 Raw Data는 아직 지연(Delay)이 적용되지 않았으므로, Row 0~3, Col 0~3 모두 동일한 시점(k)의 데이터가 들어와 있는지 확인한다. 
+    - 만약 여기서부터 데이터가 이상하다면 메모리 읽기 로직의 문제라고 판단할 수 있다.
+    - Data_Skewing을 통과하여 지연이 적용된 후, 실제로 PE Array 입구에 도착한 데이터로서, Row/Col 별 지연이 제대로 먹혔는지 확인한다.
 
 
 
