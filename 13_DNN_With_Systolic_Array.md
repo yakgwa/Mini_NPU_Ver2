@@ -511,65 +511,64 @@
 
         3) 레이어 완료 시 초기화
 
-                    // ============================================================
-                    // [CALC_L2] Layer 2 연산
-                    // ============================================================
-                    CALC_L2: begin
-                        pe_rst <= 0;
-    
-                        if (k_cnt <= cur_input_len - 1 + 2*(ARRAY_ROW - 1)) pe_en <= 1;
-                        else pe_en <= 0;
-    
-                        // Buffer에서 이전 레이어 출력 읽어서 Row 데이터로 사용
-                        raw_input_data <= {buf_r_data[3], buf_r_data[2], buf_r_data[1], buf_r_data[0]};
-                        raw_weight_data <= w_bank_out;
-    
-                        if (k_cnt == cur_input_len - 1 + 2*(ARRAY_ROW - 1)) begin
-                            state <= BUFFER_WR_L2;
-                            pe_en <= 0;
-                            write_seq_cnt <= 0;
-                        end else begin
-                            k_cnt <= k_cnt + 1;
-                        end
-                    end
-    
-                    // ============================================================
-                    // [BUFFER_WR_L2] Layer 2 결과 저장
-                    // ============================================================
-                    BUFFER_WR_L2: begin
-                        if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
-                            if (wr_global_neuron_idx < cur_neuron_total) begin
-                                buf_wen <= 1;
-                                buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
-                                buf_w_data <= act_out_val;
-                            end
-                        end
-    
-                        if (write_seq_cnt == 16) begin
-                            if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
-                                state <= CALC_L3;
-                                cur_layer_num <= 3;
-                                cur_input_len <= `numNeuronLayer2;     // 20
-                                cur_neuron_total <= `numNeuronLayer3;  // 10
-                                cur_act_sel <= SIG;
-                                group_cnt <= 0;
-                                k_cnt <= 0;
-                                pe_rst <= 1;
+                        // ============================================================
+                        // [CALC_L2] Layer 2 연산
+                        // ============================================================
+                        CALC_L2: begin
+                            pe_rst <= 0;
+        
+                            if (k_cnt <= cur_input_len - 1 + 2*(ARRAY_ROW - 1)) pe_en <= 1;
+                            else pe_en <= 0;
+        
+                            // Buffer에서 이전 레이어 출력 읽어서 Row 데이터로 사용
+                            raw_input_data <= {buf_r_data[3], buf_r_data[2], buf_r_data[1], buf_r_data[0]};
+                            raw_weight_data <= w_bank_out;
+        
+                            if (k_cnt == cur_input_len - 1 + 2*(ARRAY_ROW - 1)) begin
+                                state <= BUFFER_WR_L2;
+                                pe_en <= 0;
+                                write_seq_cnt <= 0;
                             end else begin
-                                state <= CALC_L2;
-                                group_cnt <= group_cnt + 1;
-                                k_cnt <= 0;
-                                pe_rst <= 1;
+                                k_cnt <= k_cnt + 1;
                             end
-                            write_seq_cnt <= 0;
-                        end else begin
-                            write_seq_cnt <= write_seq_cnt + 1;
                         end
-                    end
-    .
-    .
-    .
-    CALC_L3 / BUFFER_WR_L3 생략
-
+        
+                        // ============================================================
+                        // [BUFFER_WR_L2] Layer 2 결과 저장
+                        // ============================================================
+                        BUFFER_WR_L2: begin
+                            if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
+                                if (wr_global_neuron_idx < cur_neuron_total) begin
+                                    buf_wen <= 1;
+                                    buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
+                                    buf_w_data <= act_out_val;
+                                end
+                            end
+        
+                            if (write_seq_cnt == 16) begin
+                                if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                                    state <= CALC_L3;
+                                    cur_layer_num <= 3;
+                                    cur_input_len <= `numNeuronLayer2;     // 20
+                                    cur_neuron_total <= `numNeuronLayer3;  // 10
+                                    cur_act_sel <= SIG;
+                                    group_cnt <= 0;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end else begin
+                                    state <= CALC_L2;
+                                    group_cnt <= group_cnt + 1;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end
+                                write_seq_cnt <= 0;
+                            end else begin
+                                write_seq_cnt <= write_seq_cnt + 1;
+                            end
+                        end
+        .
+        .
+        .
+        CALC_L3 / BUFFER_WR_L3 생략
 
 
