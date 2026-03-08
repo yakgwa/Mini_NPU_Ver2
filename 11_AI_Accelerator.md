@@ -242,12 +242,11 @@
         endmodule
 
       - DUT 요약
-         1.  입력 행렬 A,B를 packed array(i_mat_a, i_mat_b)로 받음
-1. 입력 행렬 A,B를 packed array(i_mat_a, i_mat_b)로 받음
-2. 시작 신호(i_start)에 맞춰 A,B를 내부 버퍼에 래치(latched_mat_a/b)
-3. 카운터(cnt) 기반으로 A/B를 스큐 주입(a_in_row, b_in_col)
-4. systolic_array_2d에 en/clr 제어와 함께 입력 주입
-5. systolic_array_2d 출력 pe_acc_sum에 대해 Bias + ReLU를 적용하여 o_mat(packed array) 생성
+         1) 입력 행렬 A,B를 packed array(i_mat_a, i_mat_b)로 받음
+         2) 시작 신호(i_start)에 맞춰 A,B를 내부 버퍼에 래치(latched_mat_a/b)
+         3) 카운터(cnt) 기반으로 A/B를 스큐 주입(a_in_row, b_in_col)
+         4) systolic_array_2d에 en/clr 제어와 함께 입력 주입
+         5) systolic_array_2d 출력 pe_acc_sum에 대해 Bias + ReLU를 적용하여 o_mat(packed array) 생성
 
 
 
