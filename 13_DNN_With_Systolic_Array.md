@@ -655,5 +655,35 @@
       - OUTPUT_SCAN 전이 동작       
         1) 10개 출력 수집
     
-
+                if (k_cnt < 10) begin
+                    mf_in_data[0][k_cnt*dataWidth +: dataWidth] <= buf_r_data[0];
+                    mf_in_data[1][k_cnt*dataWidth +: dataWidth] <= buf_r_data[1];
+                    mf_in_data[2][k_cnt*dataWidth +: dataWidth] <= buf_r_data[2];
+                    mf_in_data[3][k_cnt*dataWidth +: dataWidth] <= buf_r_data[3];
+                end
+                ----------------------------------------------------------------
+                비트 슬라이싱 : 
+                k_cnt = 0: mf_in_data[img][0*8 +: 8]  = [7:0]   = buf_r_data[img]
+                k_cnt = 1: mf_in_data[img][1*8 +: 8]  = [15:8]  = buf_r_data[img]
+                ...
+                k_cnt = 9: mf_in_data[img][9*8 +: 8]  = [79:72] = buf_r_data[img]
+                ----------------------------------------------------------------
+                Buffer 읽기 주소 :
+                k_cnt = 0:
+                  buf_r_addr[0] = 0   → Image 0, Neuron 0
+                  buf_r_addr[1] = 32  → Image 1, Neuron 0
+                  buf_r_addr[2] = 64  → Image 2, Neuron 0
+                  buf_r_addr[3] = 96  → Image 3, Neuron 0
+                
+                k_cnt = 9:
+                  buf_r_addr[0] = 9   → Image 0, Neuron 9
+                  buf_r_addr[1] = 41  → Image 1, Neuron 9
+                  buf_r_addr[2] = 73  → Image 2, Neuron 9
+                  buf_r_addr[3] = 105 → Image 3, Neuron 9
+                ----------------------------------------------------------------
+                Cycle N+0 (k_cnt=0): buf_r_addr = {..., 64, 32, 0}
+                Cycle N+1: buf_r_data 유효, mf_in_data[x][7:0] 저장, k_cnt=1
+                Cycle N+2: buf_r_data 유효, mf_in_data[x][15:8] 저장, k_cnt=2
+                ...
+                Cycle N+10: buf_r_data 유효, mf_in_data[x][79:72] 저장, k_cnt=10
       
