@@ -825,7 +825,8 @@
           Img3(R3) --> [      0] [      0] [      0] [      0]
 
 
-      - 🔴앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
+
+      - 앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
 
     - 🚀 [개선 방안] FSM 일부 수정
       - 이는 기존 FSM을 다음과 같이 일부 수정함으로써 해결할 수 있다. 구체적으로는 BUFFER_WR_L1,L2 역시 바로 CALC_L2,L3로 넘어가지 않고, PRE_CALC_L2,L3로 넘어감으로써 Memory 갱신 시간을 확보한다.
