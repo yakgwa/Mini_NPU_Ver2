@@ -676,3 +676,141 @@
         mem[n]   → weight n
 
 - 이때, 추론형에 사용하기 위해 include에서 pretained 모드로 설정하게 되면, Weight를 ROM처럼 사용하여, 시뮬레이션 시작시, *.mif 파일로 초기화하고, i_wen=1일 때만, wout으로 출력을 갱신한다.
+
+### Weight_Bank.v
+
+        module Weight_Bank #(
+            parameter dataWidth = 8,
+            parameter integer ARRAY_ROW = 4,
+            parameter integer ARRAY_COL = 4
+        )(
+            input        i_clk,
+            input [31:0] i_layer_idx,    // 현재 계산 중인 레이어 번호 (1, 2, 3)
+            input [31:0] i_neuron_group, // 현재 계산 중인 뉴런 그룹 번호 (0, 1, 2...)
+            input [31:0] i_w_addr,       // 가져올 가중치의 주소 (커널 인덱스)
+            
+            output reg [ARRAY_ROW*dataWidth-1:0] w_out_packed // 선택된 4개의 가중치를 하나로 패킹한 출력
+        );
+        
+            // 1. 내부 와이어 선언
+            // ======================================================================================
+            // 각 레이어의 뉴런 개수만큼 와이어 배열을 생성합니다.
+         
+           // Layer 1: 30개 뉴런의 출력을 연결할 와이어
+            wire [dataWidth-1:0] w_l1 [`numNeuronLayer1-1:0]; 
+            
+            // Layer 2: 20개 뉴런의 출력을 연결할 와이어
+            wire [dataWidth-1:0] w_l2 [`numNeuronLayer2-1:0];
+            
+            // Layer 3: 10개 뉴런의 출력을 연결할 와이어
+            wire [dataWidth-1:0] w_l3 [`numNeuronLayer3-1:0];
+        /*
+        각 레이어의 모든 뉴런 메모리 출력을 연결할 와이어들을 선언한다.
+        예컨대, w_l1[5]는 Layer 1의 5번 뉴런 메모리에서 나온 가중치를 의미한다.
+        */
+        
+            // 2. Weight Memory 인스턴스화
+            // ======================================================================================
+        
+            // --------------------------------------------------------------------------------------
+            // [Layer 1] 
+            // - Input Size: 784 (numWeight)
+            // - Address Width: 10 bit (covers 0~783)
+            // --------------------------------------------------------------------------------------
+            Weight_Memory #(.numWeight(784), .neuronNo(0),  .layerNo(1), .addressWidth(10), .dataWidth(dataWidth), .weightFile("w_1_0.mif"))  wm_1_00 (.i_clk(i_clk), .i_wen(1'b0), .i_ren(1'b1), .i_wadd(10'd0), .i_win({dataWidth{1'b0}}), .i_radd(i_w_addr[9:0]), .o_wout(w_l1[0]));
+            .
+            .
+            .
+        
+            // --------------------------------------------------------------------------------------
+            // [Layer 2] 
+            // - Input Size: 30
+            // - Address Width: 5 bit (covers 0~29)
+            // --------------------------------------------------------------------------------------
+            Weight_Memory #(.numWeight(30), .neuronNo(0),  .layerNo(2), .addressWidth(5), .dataWidth(dataWidth), .weightFile("w_2_0.mif"))  wm_2_00 (.i_clk(i_clk), .i_wen(1'b0), .i_ren(1'b1), .i_wadd(5'd0), .i_win({dataWidth{1'b0}}), .i_radd(i_w_addr[4:0]), .o_wout(w_l2[0]));
+            .
+            .
+            .
+           
+           // --------------------------------------------------------------------------------------
+            // [Layer 3] 
+            // - Input Size: 20
+            // - Address Width: 5 bit (covers 0~19)
+            // --------------------------------------------------------------------------------------
+            Weight_Memory #(.numWeight(20), .neuronNo(0),  .layerNo(3), .addressWidth(5), .dataWidth(dataWidth), .weightFile("w_3_0.mif"))  wm_3_00 (.i_clk(i_clk), .i_wen(1'b0), .i_ren(1'b1), .i_wadd(5'd0), .i_win({dataWidth{1'b0}}), .i_radd(i_w_addr[4:0]), .o_wout(w_l3[0]));
+            .
+            .
+            .
+        
+            // 3. MUX & Packing Logic
+            // ======================================================================================
+            
+            // 선택된 4개의 가중치 임시 배열
+            reg [dataWidth-1:0] sel_w [0:3];
+            // 현재 MUX 과정에 선택된 1개 가중치
+            reg [dataWidth-1:0] raw_w; 
+        
+            // 레이어 구분을 위한 로컬 파라미터
+            localparam L1 = 'd1;
+            localparam L2 = 'd2;
+            localparam L3 = 'd3;
+        
+            integer k;   // 루프 변수
+            integer idx; // 계산된 뉴런 인덱스
+            
+            always @(*) begin
+                // Systolic Array의 행 개수(4개)만큼 반복하여 필요한 가중치를 찾아냅니다.
+                for (k = 0; k < ARRAY_ROW; k = k + 1) begin
+                    
+                    // [Index Calculation]
+                    idx = (i_neuron_group << 2) + k;
+                    
+                    raw_w = 0;
+            
+                    // [Layer Selection MUX]
+                    case (i_layer_idx)
+                        L1: begin
+                            // Layer 1은 총 30개 뉴런 (0 ~ 29)
+                            if (idx < `numNeuronLayer1) raw_w = w_l1[idx]; 
+                            else raw_w = {dataWidth{1'b0}}; // 범위 밖이면 0
+                        end
+                        L2: begin
+                            // Layer 2는 총 20개 뉴런 (0 ~ 19)
+                            if (idx < `numNeuronLayer2) raw_w = w_l2[idx];
+                            else raw_w = {dataWidth{1'b0}};
+                        end
+                        L3: begin
+                            // Layer 3는 총 10개 뉴런 (0 ~ 9)
+                            if (idx < `numNeuronLayer3) raw_w = w_l3[idx];
+                            else raw_w = {dataWidth{1'b0}};
+                        end
+                        default: raw_w = {dataWidth{1'b0}};
+                    endcase
+        
+                    // 선택된 가중치를 임시 배열에 저장
+                    sel_w[k] = raw_w;
+                end
+        
+                w_out_packed = {sel_w[3], sel_w[2], sel_w[1], sel_w[0]};
+            end
+        endmodule
+
+- Weight_Bank.v는 여러 개의 Weight_Memory를 관리하며,요청된 레이어와 뉴런 그룹에 해당하는 가중치들을 Parallel Packing하여 내보내는 Memory Bank Controller이다. 해당 모듈에서는 아래와 같이,
+
+        always @(*) begin
+                for (k = 0; k < ARRAY_ROW; k = k + 1) begin
+
+- Systolic Array의 행 개수(4)만큼 루프를 돌며, 4개의 weight를 동시에 선택한다. 동시 선택은,
+
+        idx = (i_neuron_group << 2) + k;
+
+- 예컨대, i_neuron_group = 2 (3번째 그룹)이고 k = 1 (2번째 행)이라면, idx = (2 * 4) + 1 = 9번 뉴런의 가중치를 가져오게 되는 원리이다.
+
+                      case (i_layer_idx)
+                        L1: begin
+                            if (idx < `numNeuronLayer1) raw_w = w_l1[idx]; 
+                            else raw_w = {dataWidth{1'b0}};
+                        end
+                        ...
+
+- 이후, i_layer_idx에 따라 어느 와이어 배열(w_l1, w_l2, w_l3)을 볼지 결정하고, 계산된 idx가 해당 레이어의 전체 뉴런 수보다 작을 때만 유효한 값을 가져온 후, 루프를 통해 선택된 4개의 가중치(sel_w)를 MSB부터 LSB 순서로 합친다. 이렇게 만들어진 32bit 데이터가 Systolic Array의 한 Column 입력으로 들어가게 된다.
