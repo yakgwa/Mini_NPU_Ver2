@@ -248,12 +248,28 @@
          4) systolic_array_2d에 en/clr 제어와 함께 입력 주입
          5) systolic_array_2d 출력 pe_acc_sum에 대해 Bias + ReLU를 적용하여 o_mat(packed array) 생성
 
+      - Moore Machine 기반 FSM 상태 전이 요약
+        
+        |State|입력/조건|Next-State|cnt 동작|출력|
+        | :---: | :---: | :---:| :---:| :---:|
+        |**IDLE**|**i_start=0**|**IDLE**|**0 유지**|**busy=0, done=0**|
+        |**IDLE**|**i_start=1**|**RUN**|**다음 사이클에 증가**|**busy=0→1**|
+        |**RUN**|**cnt < INJ_CYCLES**|**RUN**|**cnt++**|**busy=1**|
+        |**RUN**|**cnt > INJ_CYCLES**|**DONE**|**다음 사이클 cnt=0**|**busy=0, done=1**|
+        |**DONE**|**i_start=1**|**DONE**|**0 유지**|**done=1 유지**|
+        |**DONE**|**i_start=0**|**IDLE**|**0 유지**|**done=0**|
 
+      - 전체 블록 다이어그램 요약
+        - i_mat_a → <Packed→Unpacked> Mapping → latched_mat_a → Skew → a_in_row → SA 입력
+        - i_mat_b → <Packed→Unpacked> Mapping → latched_mat_b → Skew → b_in_col → SA 입력
+        - state/cnt → Skew Timing 결정
+        - state → array_en, array_clr, o_busy, o_done
+        - SA 출력 pe_acc_sum → PPU(ReLU+Bias) → o_ma
 
+      - 전체 블록 다이어그램 요약
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_36.png" width="400"/>
 
-
-
-
+<div align="left">
 
 
 
