@@ -64,3 +64,127 @@
                 //Systolic Array와 Data Skewing에 Broadcasting
                 //HW : Single FF -> Fan-Out Tree (16개 PE에 분배)
 
+                // ======================================================================================
+                // 3. Data Path Wires
+                // ======================================================================================
+                // [Systolic Array I/O]
+                wire signed [ARRAY_ROW*ARRAY_COL*2*dataWidth-1:0] array_out_packed; // SA 전체 출력 (256-bit)
+                //16 PE x 16bit Accumulator
+            
+                wire [ARRAY_ROW*dataWidth-1:0] sys_row_in;  // MUX → Skewing 입력 (Row)  [CHANGED: reg → wire]
+                wire [ARRAY_COL*dataWidth-1:0] sys_col_in;  // MUX → Skewing 입력 (Col)  [CHANGED: reg → wire]
+                //MUX 출력 와이어
+            
+                // [Data_Skewing 출력 와이어]
+                wire [ARRAY_ROW*dataWidth-1:0] skewed_row_data;  // Skewing 출력 → SA Row 에지
+                wire [ARRAY_COL*dataWidth-1:0] skewed_col_data;  // Skewing 출력 → SA Col 에지
+                //디버깅 용도로 중간 신호를 와이어로 노출, 실제 입력 엣지
+            
+                // [FSM → MUX 데이터]
+                reg  [ARRAY_ROW*dataWidth-1:0] raw_input_data;   // FSM에서 결정된 Row 원본 데이터
+                reg  [ARRAY_COL*dataWidth-1:0] raw_weight_data;   // FSM에서 결정된 Col 원본 데이터
+                //register로서, FSM always 블록에 할당
+                // Layer 1: `raw_input_data <= i_input_pixels`
+                // Layer 2/3: `raw_input_data <= {buf_r_data[3:0]}`
+            
+                // [Weight/Bias Bank 출력]
+                wire [ARRAY_ROW*dataWidth-1:0]   w_bank_out;      // Weight Bank → 4개 가중치 (32-bit)
+                wire [ARRAY_ROW*2*dataWidth-1:0] b_bank_out;      // Bias Bank → 4개 바이어스 (64-bit)
+            
+                // [Unified Buffer I/O]
+                reg buf_wen;                                       // Buffer 쓰기 활성화
+                reg  [7:0] buf_w_addr;                             // Buffer 쓰기 주소
+                reg  [dataWidth-1:0] buf_w_data;                   // Buffer 쓰기 데이터
+                wire [dataWidth-1:0] buf_r_data [3:0];             // Buffer 읽기 데이터 (4 포트)
+                wire [31:0] buf_r_addr [3:0];                      // Buffer 읽기 주소 (4 포트)
+                // 1개 Write Port: `buf_wen`, `buf_w_addr`, `buf_w_data`
+                // 4개 Read Ports: `buf_r_addr[0~3]`, `buf_r_data[0~3]`
+                // buf_w_addr[31:0]: 32bit 주소
+                // 실제 SRAM(Unified Buffer) 크기: 256 words → 8bit 주소면 충분 (2^8=256)
+            
+                // [Activation Unit I/O]
+                wire [2*dataWidth-1:0] au_in_psum;                 // AU 입력: PE 누적합
+                wire [2*dataWidth-1:0] au_in_bias;                 // AU 입력: Bias
+                wire [dataWidth-1:0] act_out_val;                  // AU 출력: 활성화 결과
+                // [Unpacked PE Results & Bias]
+                wire [2*dataWidth-1:0] pe_res_unpacked [ARRAY_ROW-1:0][ARRAY_COL-1:0]; // 4×4 PE 결과
+                wire [2*dataWidth-1:0] bias_unpacked [3:0];        // 4개 Bias 값
+                wire [2*dataWidth-1:0] debug_mul_00;               // PE[0][0] 곱셈 디버그
+                // pe_res_unpacked[4][4] : 2D 배열 (16개 × 16-bit)
+                // 합성: `array_out_packed`의 비트 슬라이싱 결과
+                // Activation Unit MUX :
+                // `au_in_psum` = `pe_res_unpacked[in_img_idx][in_neu_idx]`
+                // `au_in_bias` = `bias_unpacked[in_neu_idx]`
+                // HW : 16:1 MUX (write_seq_cnt로 선택)
+                
+                // [BUFFER_WR 인덱스 계산]
+                wire [1:0]  in_img_idx;           // write_seq_cnt에서 이미지 인덱스 추출
+                wire [1:0]  in_neu_idx;           // write_seq_cnt에서 뉴런 인덱스 추출
+                wire [4:0]  delayed_seq_cnt;      // 1사이클 지연된 시퀀스 카운터
+                wire [1:0]  wr_img_idx;           // 실제 기록용 이미지 인덱스
+                wire [1:0]  wr_neu_idx;           // 실제 기록용 뉴런 인덱스
+                wire [31:0] wr_global_neuron_idx; // 전역 뉴런 인덱스 (group*4 + neu)
+            
+                // [MaxFinder]
+                reg [10*dataWidth-1:0] mf_in_data [3:0];   // MaxFinder 입력 (10개 × 8bit × 4이미지)
+                reg mf_valid_pulse;                          // MaxFinder 유효 펄스
+                wire [31:0] mf_out [3:0];                    // MaxFinder 출력 (분류 결과)
+                wire [3:0] mf_out_valid;                     // MaxFinder 출력 유효
+
+    - 1️⃣ assign : Combination Logic
+
+             // ======================================================================================
+            // 4. Combinational Logic
+            // ======================================================================================
+            // BUFFER_WR 상태에서 16개 PE 결과를 순차적으로 읽어오기 위한 인덱스 계산
+            // write_seq_cnt = {img_idx[1:0], neu_idx[1:0]} 형태로 16 = 4이미지 × 4뉴런
+            assign in_img_idx = write_seq_cnt[3:2];   // 상위 2비트 = 이미지 번호
+            assign in_neu_idx = write_seq_cnt[1:0];   // 하위 2비트 = 뉴런 번호
+        
+            // Activation Unit 출력이 1사이클 지연되므로 실제 기록은 delayed_seq_cnt 기반
+            assign delayed_seq_cnt = write_seq_cnt - 1;
+            assign wr_img_idx = delayed_seq_cnt[3:2];
+            assign wr_neu_idx = delayed_seq_cnt[1:0];
+        
+            // 전역 뉴런 인덱스: 현재 그룹의 4개 뉴런 중 몇 번째인지
+            assign wr_global_neuron_idx = group_cnt * 4 + wr_neu_idx;
+        
+            // Activation Unit 입력 MUX: write_seq_cnt가 가리키는 PE와 Bias를 선택
+            assign au_in_psum = pe_res_unpacked[in_img_idx][in_neu_idx];
+            assign au_in_bias = bias_unpacked[in_neu_idx];
+        
+            // Unified Buffer 읽기 주소: 이미지별로 32-word 오프셋
+            // Layer 2/3에서 이전 레이어 출력을 읽어올 때 사용
+            assign buf_r_addr[0] = (0 * 32) + k_cnt;   // Image 0 영역
+            assign buf_r_addr[1] = (1 * 32) + k_cnt;   // Image 1 영역
+            assign buf_r_addr[2] = (2 * 32) + k_cnt;   // Image 2 영역
+            assign buf_r_addr[3] = (3 * 32) + k_cnt;   // Image 3 영역
+        
+            // Input MUX with Zero-Padding for Skew Flush
+            // k_cnt가 입력해야 할 데이터 길이(cur_input_len)보다 작은가? 
+            // 즉, 아직 입력할 진짜 데이터가 남았다면, raw_input_data를 통과시키고,
+            // 아니라면 모두 0을 통과시킨다.
+            assign sys_row_in = (k_cnt < cur_input_len) ? raw_input_data : {ARRAY_ROW*dataWidth{1'b0}};
+            assign sys_col_in = (k_cnt < cur_input_len) ? raw_weight_data : {ARRAY_COL*dataWidth{1'b0}};
+            
+            // 결과 출력 연결
+            assign o_result_class_0 = mf_out[0];
+            assign o_result_class_1 = mf_out[1];
+            assign o_result_class_2 = mf_out[2];
+            assign o_result_class_3 = mf_out[3];
+        
+            // Packing ↔ Unpacking
+            genvar i, j;
+            generate
+                // PE 결과 unpack: array_out_packed → pe_res_unpacked[img][neuron]
+                for (i = 0; i < ARRAY_ROW; i = i + 1) begin : UNPACK_IMG
+                    for (j = 0; j < ARRAY_ROW; j = j + 1) begin : UNPACK_NEURON
+                        assign pe_res_unpacked[i][j] = 
+                            array_out_packed[((i*ARRAY_ROW+j)+1)*2*dataWidth-1 : (i*ARRAY_ROW+j)*2*dataWidth];
+                    end
+                end
+                // Bias unpack: b_bank_out → bias_unpacked[neuron]
+                for (j = 0; j < 4; j = j + 1) begin : UNPACK_BIAS
+                    assign bias_unpacked[j] = b_bank_out[(j+1)*2*dataWidth-1 : j*2*dataWidth];
+                end
+            endgenerate
