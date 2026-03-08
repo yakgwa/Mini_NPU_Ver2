@@ -624,3 +624,55 @@
                         이때, 상위 비트가 잘리게 되며, 그로 인해 정보 손실이 발생할 수 있다. 
                 해결  : saturation 처리를 추가하여, 범위 내에서 값을 유지시켜야 한다. 
                         따라서 최댓값과 최솟값으로 클리핑하여 오버플로우 및 정보 손실을 방지한다.
+
+### Weight_Memory.v - Reference Model에서 작성한 DUT와 동일
+
+        module Weight_Memory #(
+            parameter numWeight     = 784, 
+            parameter neuronNo      = 1,
+            parameter layerNo       = 1,
+            parameter addressWidth  = 10,
+            parameter dataWidth     = 8,
+            parameter weightFile    = "w_1_15.mif"
+            )( 
+            input                       i_clk,
+            input                       i_wen,  //Write Enable
+            input                       i_ren,  //Read Enable
+            input [addressWidth-1:0]    i_wadd, //Write Address
+            input [addressWidth-1:0]    i_radd, //Read Address
+            input [dataWidth-1:0]       i_win,  //Data to Write
+            output reg [dataWidth-1:0]  o_wout  //Data to Read
+            );
+            
+            reg [dataWidth-1:0] mem [numWeight-1:0];    //Memory Array Definition
+            
+            //Inference Mode : .mif Read & Weights put in an mem = ROM
+            `ifdef pretrained
+             initial begin
+        	        $readmemb(weightFile, mem);
+        	 end
+        	`else
+        	
+        	//Training Mode = Write Mode : mem = RAM
+        	always @(posedge i_clk) begin
+        	   if (i_wen) begin
+        				mem[i_wadd] <= i_win;
+        	   end
+        	end 
+            `endif
+            
+            always @(posedge i_clk) begin
+                if (i_ren) begin
+                    o_wout <= mem[i_radd];
+                end
+            end 
+        endmodule
+
+- 1차원 메모리 배열로, 각 entry마다 하나의 weight가 다음과 같이 들어간다.
+
+        mem[0]   → weight 0
+        mem[1]   → weight 1
+        ...
+        mem[n]   → weight n
+
+- 이때, 추론형에 사용하기 위해 include에서 pretained 모드로 설정하게 되면, Weight를 ROM처럼 사용하여, 시뮬레이션 시작시, *.mif 파일로 초기화하고, i_wen=1일 때만, wout으로 출력을 갱신한다.
