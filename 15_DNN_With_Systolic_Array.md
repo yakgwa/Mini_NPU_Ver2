@@ -307,36 +307,16 @@ Proposed Model : 10000 Sample Accuracy
       - Reference : 107,758 IPS \ 7,785 LUTs = 13.84 IPS/LUT
       - Proposed: 57,196 IPS \ 104 LUTs = 550.0 IPS/LUT
       - 39.74배 향상
+   - 2️⃣ 전력 효율성 (Performance per Watt)
+      - Reference : 107,758 IPS / 1.893 W = 56.9kIPS/W
+      - Proposed : 57,196 IPS / 1.716 W = 33.3kIPS/W
+      - (대부분의 전력 소모(약, 1.572W)가 PS에서 사용하는 영역이라는 점을 감안해야 함)
+   - 3️⃣ 최대 주파수 기준 Throughput (Potential Performance @ fmax)
+      - 현재는 100MHz로 제한하여 측정했지만, 각 하드웨어를 한계 주파수까지 가속했을 때의 이론적 최대 Throughput을 계산한다.
+      - Reference : 107,758 IPS / (115.3/100) = 124,245 IPS
+      - Proposed : 57,196 IPS / (159.1/100) = 91,000 IPS
+      - (클럭 주파수를 최대치로 올리면, Reference 대비 1.365배 차이로 격차를 줄일 수 있으나, 여전히 Proposed Model의 Throughput은 Reference 대비 낮은 것을 알 수 있음.)
 
-​
-
-② 전력 효율성 (Performance per Watt)
-
-Reference : 107,758 IPS / 1.893 W = 56.9kIPS/W
-
-Proposed : 57,196 IPS / 1.716 W = 33.3kIPS/W
-
-(대부분의 전력 소모(약, 1.572W)가 PS에서 사용하는 영역이라는 점을 감안해야 함)
-
-​
-
-③ 최대 주파수 기준 Throughput 
-
-(Potential Performance @ fmax)
-
-현재는 100MHz로 제한하여 측정했지만, 각 하드웨어를 한계 주파수까지 가속했을 때의 이론적 최대 Throughput을 계산한다.
-
-Reference : 107,758 IPS / (115.3/100) = 124,245 IPS
-
-Proposed : 57,196 IPS / (159.1/100) = 91,000 IPS
-
-(클럭 주파수를 최대치로 올리면, Reference 대비 1.365배 차이로 격차를 줄일 수 있으나, 여전히 Proposed Model의 Throughput은 Reference 대비 낮은 것을 알 수 있음.)
-
-​
-
-​
-
-Proposed GEMM Accelerator는 Reference Model 대비 LUT 사용량을 98.6% 절감(7,785 → 104)하고 FF 자원을 98% 줄이는 등 획기적인 면적 효율성을 달성하였다. 이러한 설계 덕분에 fmax는 Reference Model의 115.3MHz 대비 약 38% 향상된 159.1MHz를 기록하였으며, 타이밍 여유(WNS) 또한 1.3ns에서 3.7ns로 대폭 확보하여 공정 변이와 온도 변화에 강한 하드웨어 신뢰성을 확보하였다. 비록 전력 소모의 대부분이 Zynq SoC의 PS 영역에서 발생하여 전체 전력 절감률은 약 9.3%에 그쳤으나, 코어 자체의 동적 전력 효율은 면적 감소와 비례하여 크게 개선되었음을 확인하였다.
-
-데이터 처리 속도 측면에서는 100MHz 실험 환경 기준 약 57,196 IPS를 기록하여, Reference Modeld의 107,758 IPS 대비 약 1.88배 낮은 처리량을 보였다. 하드웨어의 잠재력을 나타내는 fmax 기준으로 성능을 환산할 경우, 제안 모델은 약 91,000 IPS까지 성능 확장이 가능하여 레퍼런스와의 격차를 1.365배 수준으로 좁힐 수 있다. 결과적으로 본 설계는 절대적인 처리 속도를 일부 Trade-off하는 대신, 면적 대비 성능(Performance per Area)을 약 39.74배 이상 극대화한 고효율 아키텍처라고 생각된다. 실질적인 Throughput을 높이기 위해서는 현재 면적에서 큰 이점을 가져간 상태이므로, Systolic Array의 크기를 늘리는 방향이 적합할 것이라고 생각된다.
+    - Proposed GEMM Accelerator는 Reference Model 대비 LUT 사용량을 98.6% 절감(7,785 → 104)하고 FF 자원을 98% 줄이는 등 획기적인 면적 효율성을 달성하였다. 이러한 설계 덕분에 fmax는 Reference Model의 115.3MHz 대비 약 38% 향상된 159.1MHz를 기록하였으며, 타이밍 여유(WNS) 또한 1.3ns에서 3.7ns로 대폭 확보하여 공정 변이와 온도 변화에 강한 하드웨어 신뢰성을 확보하였다. 비록 전력 소모의 대부분이 Zynq SoC의 PS 영역에서 발생하여 전체 전력 절감률은 약 9.3%에 그쳤으나, 코어 자체의 동적 전력 효율은 면적 감소와 비례하여 크게 개선되었음을 확인하였다.
+    - 데이터 처리 속도 측면에서는 100MHz 실험 환경 기준 약 57,196 IPS를 기록하여, Reference Modeld의 107,758 IPS 대비 약 1.88배 낮은 처리량을 보였다. 하드웨어의 잠재력을 나타내는 fmax 기준으로 성능을 환산할 경우, 제안 모델은 약 91,000 IPS까지 성능 확장이 가능하여 레퍼런스와의 격차를 1.365배 수준으로 좁힐 수 있다. 결과적으로 본 설계는 절대적인 처리 속도를 일부 Trade-off하는 대신, 면적 대비 성능(Performance per Area)을 약 39.74배 이상 극대화한 고효율 아키텍처라고 생각된다. 실질적인 Throughput을 높이기 위해서는 현재 면적에서 큰 이점을 가져간 상태이므로, Systolic Array의 크기를 늘리는 방향이 적합할 것이라고 생각된다.
 
