@@ -154,7 +154,7 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_46.png" width="400"/>
 
-각 열 별로 왼쪽은 test_data_0000~0003.txt value / 오른쪽은 w_1_0~3.mif value에 해당한다
+각 열 별로 왼쪽은 test_data_0000..0003.txt value / 오른쪽은 w_1_0..3.mif value에 해당한다
 
 <div align="left">
 
@@ -206,12 +206,46 @@
                 Row: R0=   0  R1=   0  R2=   0  R3=   0
                 Col: C0=   0  C1=  -1  C2=   0  C3=   0
 
+### 분석 : 구체적인 타이밍 검증2
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_47.png" width="400"/>
 
+<div align="left">
 
+- 1️⃣ 검증 기준점 재설정 (Index 202) : 앞선 테스트 구간보다 Pixel과 Weight가 0이 아닌 유효 값으로 다양하게 분포된 202번째 데이터를 새로운 검증 포인트로 선정해보자. Sparse한 데이터가 아닌 실제 연산 값이 몰리는 구간을 확인함으로써, Corner Case에서의 동작 안정성을 확보하도록 한다.
+- 
+- 2️⃣ 타겟 사이클 계산 (Cycle 206) : 앞서 고려된 4 Cycle를 적용하여 모니터링 시점을 계산한다.
+    - Target Index : 202번째 데이터
+    - System Latency : +4 Cycle
+    - Verification Point : 202 + 4 = 206 Cycle
 
+            ====== [Cycle:  206] ======
+              [Skewed Data (Array Edge)]
+                Row: R0=  42  R1=   0  R2=   0  R3=   0
+                Col: C0=  -2  C1=   0  C2=   0  C3=   0
+              [Wavefront Entry Pattern]
+                                       C0=  -2  C1=   0  C2=   0  C3=   0  <-- Weight (Col)
+                                       |       |       |       |
+                                       v       v       v       v
+              R0=  42  ---------->  [PE00]  [PE01]  [PE02]  [PE03]
+              R1=   0  ---------->  [PE10]  [PE11]  [PE12]  [PE13]
+              R2=   0  ---------->  [PE20]  [PE21]  [PE22]  [PE23]
+              R3=   0  ---------->  [PE30]  [PE31]  [PE32]  [PE33]
 
+- 3️⃣ 현재 상태: 입력 레지스터 대기 시점에서 데이터는 pe_systolic_cell.v a_reg에 Latch된 상태일 뿐, 데이터가 PE 셀의 문턱은 넘었으나, 실제 연산을 수행하는 PE.v의 Combinational Logic을 통과하여 결과가 확정된 상태는 아닌 상황이다.
 
+        ====== [Cycle:  207] ======
+          [Skewed Data (Array Edge)]
+            Row: R0=  92  R1=   0  R2=   0  R3=   0
+            Col: C0=   0  C1=   0  C2=   1  C3=   0
+          [Wavefront Entry Pattern]
+                                   C0=   0  C1=   0  C2=   1  C3=   0  <-- Weight (Col)
+                                   |       |       |       |
+                                   v       v       v       v
+          R0=  92  ---------->  [PE00]  [PE01]  [PE02]  [PE03]
+          R1=   0  ---------->  [PE10]  [PE11]  [PE12]  [PE13]
+          R2=   0  ---------->  [PE20]  [PE21]  [PE22]  [PE23]
+          R3=   0  ---------->  [PE30]  [PE31]  [PE32]  [PE33]
 
 
 
