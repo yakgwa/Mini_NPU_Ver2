@@ -314,6 +314,77 @@
         
           sa_ctrl_txn sa = new();
 
+    - 2️⃣ Constrained Random Transaction
+      - 기존에 정의한 class와 큰 차이점은 없지만 이번 transaction에서는 두 입력과 start를 걸지 말지 rand bit do_start를 dist 구문을 활용한 확률 분포 제약을 건 세 가지 케이스를 random transaction한다.
+
+          //==========================================================
+          // Step 3) DUT Instantiation
+          //==========================================================
+          systolic_controller_relu #(
+            ...
+          ) dut (
+            .clk     (clk),
+            .rst_n   (rst_n),
+            .i_start (i_start),
+            .i_mat_a (i_mat_a),
+            .i_mat_b (i_mat_b),
+            .o_busy  (o_busy),
+            .o_done  (o_done),
+            .o_mat   (o_mat)
+          );
+        
+          //==========================================================
+          // Clock / Reset
+          //==========================================================
+          initial begin
+            clk = 1'b0;
+            forever #5 clk = ~clk;
+          end
+        
+          initial begin
+            rst_n = 1'b0;
+            i_start = 1'b0;
+        
+            i_mat_a = '0;
+            i_mat_b = '0;
+            tb_mat_a = '{default:'0}; //inner tb 2D array → 0 reset
+            tb_mat_b = '{default:'0}; //inner tb 2D array → 0 reset
+            tb_mat_c = '{default:'0}; //inner tb 2D array → 0 reset
+        
+            #30;
+            rst_n = 1'b1;
+          end  
+        
+          //==========================================================
+          // Golden Model (Bias + ReLU)
+          //==========================================================
+          int unsigned      C_ref_int  [0:ROWS-1][0:COLS-1];
+          //golden model output을 최초로 int로 저장하는 2D array
+          //Bias subtraction 및 ReLU와 같은 PPU 진행과정에서 overflow 관리 목적
+          logic [ACC_W-1:0] C_ref [0:ROWS-1][0:COLS-1];
+          //golden model output인 C_ref_int를 dut 출력과 동일한 ACC_W 폭으로 저장
+        
+          task automatic calc_golden_relu();
+            for (int r=0; r<ROWS; r++) begin
+              for (int c=0; c<COLS; c++) begin
+                int tmp = 0; //(r,c) 하나의 누산 결과를 int로 계산할 임시 변수
+                logic [ACC_W-1:0] tmp_c_ref;  
+        
+                for (int k=0; k<K_DIM; k++) begin
+                  tmp += (sa.A[r][k] * sa.B[k][c]);
+                end
+                /*Bias*/ tmp -= BIAS; //누산 이후, Bias Subtraction
+                /*ReLU*/ if (tmp < 0) tmp = 0; //ReLU Activation Function
+        
+                C_ref_int[r][c] = tmp;
+                tmp_c_ref = tmp;              
+                C_ref[r][c] = tmp_c_ref;     
+              end
+            end
+          endtask
+
+
+
 
 
 
