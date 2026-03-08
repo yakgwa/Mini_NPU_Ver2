@@ -493,8 +493,8 @@
       - 🔴 문제 원인 정리
 
         1. Cycle 813 (BUFFER_WR_L1 종료) : 
-       - state <= CALC_L1, group_cnt <= 1, k_cnt <= 0, pe_rst <= 1 설정.
-       - Non-blocking (<=)에 의해 Cycle 814의 Rising Edge에 적용
+          - state <= CALC_L1, group_cnt <= 1, k_cnt <= 0, pe_rst <= 1 설정.
+          - Non-blocking (<=)에 의해 Cycle 814의 Rising Edge에 적용
 
 ​
 
