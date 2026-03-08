@@ -66,7 +66,13 @@
                └─ Combinational max-finding logic
 
 
-
+            // Weight Bank: Layer 1, Neuron 0의 첫 5개 가중치 샘플 출력
+            $fdisplay(log_fd, "  [Weight] L1_N0 w[202]=%d, w[203]=%d, w[204]=%d, w[205]=%d, w[206]=%d",
+                $signed(dut.wb.wm_1_00.mem[202]),
+                $signed(dut.wb.wm_1_00.mem[203]),
+                $signed(dut.wb.wm_1_00.mem[204]),
+                $signed(dut.wb.wm_1_00.mem[205]),
+                $signed(dut.wb.wm_1_00.mem[206]));
 
 
 
