@@ -334,7 +334,7 @@
 
 <div align="left">
 
-      - 최종 데이터 도달 및 연산 종료 시점 분석 결과, Row/Col 3의 마지막 값이 PE에 도달하는 시점은 Cycle 790으로 확인되었다. MAC 연산까지 고려하면 각 Col별 종료 시점은 다음과 같이 순차적으로 지연된다.
+- 최종 데이터 도달 및 연산 종료 시점 분석 결과, Row/Col 3의 마지막 값이 PE에 도달하는 시점은 Cycle 790으로 확인되었다. MAC 연산까지 고려하면 각 Col별 종료 시점은 다음과 같이 순차적으로 지연된다.
     - Col 0: Cycle 792
     - Col 0: Cycle 793
     - Col 0: Cycle 794
@@ -414,9 +414,22 @@
 
     - 로그 분석 결과, test_data_0000 ~ 0002.txt 구간까지는 Layer 1(Neuron 0~3)의 연산 결과가 의도된 메모리 주소에 정확히 저장됨을 확인했다. 그러나 마지막 샘플인 test_data_0003.txt 처리 구간에서 데이터가 전부 저장되지 않는 현상이 발견되었다. 이는 데이터 저장 주소 카운터인 seq 값이 데이터 도달 시점보다 일찍 종료되어, 마지막 결과값을 담을 주소 공간을 할당하지 못했기 때문이다. 이는 파이프라인 지연이 누적되면서, 결과 데이터를 버퍼에 쓰는 타이밍이 데이터 유효 구간보다 짧아져서 발생한 문제이다.
 
+    - 🚀 Unified Buffer 쓰기 타이밍 마진 개선: 마지막 샘플 저장 누락 해결
+      - Buffer Write Timing을 확장함으로써 누락된 마지막 데이터를 저장할 수 있다. 즉, 카운터 로직에 +1 마진을 추가하여, seq가 유효하게 유지되도록 수정했다.
 
-
-
+                            BUFFER_WR_L1: begin
+                                //16 PE 결과를 순차적으로 처리
+                                if (write_seq_cnt > 0 && write_seq_cnt <= 16+1) begin
+                                    ...
+                                // 16개 PE 처리 완료 시 다음 동작 결정
+                                if (write_seq_cnt == 16+1) begin
+                                    ...
+            ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 796, Time 8065000) ############
+              ...
+              [BUF_WR] Cycle:  810 | addr= 96 | data= 100 | act_out=   3 | AU_psum=-15979 | AU_bias= -2560 | seq=14
+              [BUF_WR] Cycle:  811 | addr= 97 | data=   3 | act_out=   0 | AU_psum=-13389 | AU_bias=  1792 | seq=15
+              [BUF_WR] Cycle:  812 | addr= 98 | data=   0 | act_out=   0 | AU_psum= -1201 | AU_bias=  1792 | seq=16
+              [BUF_WR] Cycle:  813 | addr= 99 | data=   0 | act_out=  72 | AU_psum= -1726 | AU_bias= -2048 | seq=17
 
 
 
