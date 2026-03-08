@@ -1192,9 +1192,23 @@
                     o_done_interrupt <= 1;
                 end
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_51.png" width="400"/>
 
+<div align="left">
 
+- 👉 최종적인 4 Batch에 대한 출력 결과는 모두 일치함을 알 수 있다.
 
+  ### 개선점 요약
+- 검증 환경 개선 : 테스트벤치 모니터링 포인트 확장을 통한 디버깅 효율 증대.
+- 타이밍 최적화 : 파이프라이닝 및 데이터 스큐를 반영한 카운터 제어 로직 정밀 튜닝.
+- 동작 안정성 : 버퍼 쓰기(Write) 타이밍 마진 확보 및 FSM 인터럽트 핸드셰이킹 개선.
+- FSM 강건성 확보: 상태 전이 불안정(Glitch/X) 해소를 위한 완충 State 추가 설계.
+- 데이터 정합성: Reset/Enable 로직 보강을 통한 주소-데이터 불일치 방지.
+- 메모리 갱신: 다음 레이어 연산 진입 전, 안정적인 메모리 갱신 시간(Cycle) 확보.
+- 데이터 정렬: 지연 레지스터를 활용한 ROW/COL 데이터 타이밍 정렬(Alignment).
+- 구조적 개선: Ping-Pong Buffering(메모리 뱅킹 적용)으로 데이터 오버라이트(Overwrite) 원천 차단.
+- 인터페이스 개선: 모듈 간 제어 신호(Interrupt) 전달의 타이밍 신뢰성 확보.
+  
 
 
     
