@@ -814,3 +814,173 @@
                         ...
 
 - 이후, i_layer_idx에 따라 어느 와이어 배열(w_l1, w_l2, w_l3)을 볼지 결정하고, 계산된 idx가 해당 레이어의 전체 뉴런 수보다 작을 때만 유효한 값을 가져온 후, 루프를 통해 선택된 4개의 가중치(sel_w)를 MSB부터 LSB 순서로 합친다. 이렇게 만들어진 32bit 데이터가 Systolic Array의 한 Column 입력으로 들어가게 된다.
+
+### Bias_Bank.v / Bias_Memory.v
+
+        module Bias_Bank #(
+            parameter dataWidth = 8,
+            parameter integer ARRAY_ROW = 4,
+            parameter integer ARRAY_COL = 4
+            )(
+            input        i_clk,
+            input [31:0] i_layer_idx,    // 현재 레이어 인덱스 (1, 2, 3)
+            input [31:0] i_neuron_group, // 현재 뉴런 그룹 (0, 1, 2...)
+            
+            // 출력 폭: 16비트 * 4개 = 64비트
+            // (8bit Bias를 Fixed-Point를 고려한 16bit로 확장)
+            output reg [ARRAY_ROW*2*dataWidth-1:0] b_out_packed 
+            );
+        
+            // 1. 내부 와이어 선언 (모든 뉴런의 Bias 값을 상시 대기)
+            // ======================================================================================
+            wire [dataWidth-1:0] w_b_l1 [0:29]; // Layer 1: 30개
+            wire [dataWidth-1:0] w_b_l2 [0:19]; // Layer 2: 20개
+            wire [dataWidth-1:0] w_b_l3 [0:9];  // Layer 3: 10개
+        
+        
+            // 2. Bias Memory Instantiation
+            // ======================================================================================
+            // Bias_Memory 모듈은 코드 하단에 정의
+        
+            // [Layer 1] 30 Instantiation
+            // --------------------------------------------------------------------------------------
+            Bias_Memory #(.biasFile("b_1_0.mif"))  bm_1_00 (.o_bias(w_b_l1[0]));
+            .
+            .
+            .
+        
+            // [Layer 2] 20 Instantiation
+            // --------------------------------------------------------------------------------------
+            Bias_Memory #(.biasFile("b_2_0.mif"))  bm_2_00 (.o_bias(w_b_l2[0]));
+            .
+            .
+            .
+        
+            // [Layer 3] 10 Instantiation
+            // --------------------------------------------------------------------------------------
+            Bias_Memory #(.biasFile("b_3_0.mif"))  bm_3_00 (.o_bias(w_b_l3[0]));
+            .
+            .
+            .
+        
+            // 3. Selection MUX Logic
+            // ======================================================================================
+            reg [dataWidth-1:0] sel_b [0:3]; // 선택된 4개의 Bias 값
+            
+            localparam L1 = 'd1;
+            localparam L2 = 'd2;
+            localparam L3 = 'd3;
+        
+            integer k;
+            integer idx;
+        
+            always @(*) begin
+                // 초기화
+                sel_b[0] = 0; sel_b[1] = 0; sel_b[2] = 0; sel_b[3] = 0;
+                
+                case(i_layer_idx)
+                    L1: begin
+                        for(k=0; k<ARRAY_ROW; k=k+1) begin
+                            idx = (i_neuron_group << 2) + k; // idx = group*4 + k
+                            if (idx < `numNeuronLayer1) sel_b[k] = w_b_l1[idx];
+                        end
+                    end
+                    L2: begin
+                        for(k=0; k<ARRAY_ROW; k=k+1) begin
+                            idx = (i_neuron_group << 2) + k;
+                            if (idx < `numNeuronLayer2) sel_b[k] = w_b_l2[idx];
+                        end
+                    end
+                    L3: begin
+                        for(k=0; k<ARRAY_ROW; k=k+1) begin
+                            idx = (i_neuron_group << 2) + k;
+                            if (idx < `numNeuronLayer3) sel_b[k] = w_b_l3[idx];
+                        end
+                    end
+                    default: begin
+                        sel_b[0] = 0; sel_b[1] = 0; sel_b[2] = 0; sel_b[3] = 0;
+                    end
+                endcase
+            end
+            
+            // 4. Output Packing with Shift Left (Q4.4 Format Adjustment)
+            // ======================================================================================
+            always @(posedge i_clk) begin
+                b_out_packed <= { 
+                    sel_b[3], {dataWidth{1'b0}}, // [Bias][00000000]
+                    sel_b[2], {dataWidth{1'b0}},
+                    sel_b[1], {dataWidth{1'b0}},
+                    sel_b[0], {dataWidth{1'b0}}
+                };
+            end
+        endmodule
+        
+        // ======================================================================================
+        // Sub-Module: Bias Memory (Simple ROM)
+        // ======================================================================================
+        module Bias_Memory #(
+            parameter dataWidth = 8,
+            parameter biasFile  = "b_default.mif"
+            )(
+            output [dataWidth-1:0] o_bias
+            );
+        
+            reg [dataWidth-1:0] mem [0:0]; // Depth 1 (값 하나만 저장)
+        
+            initial begin
+                mem[0] = {dataWidth{1'b0}}; // 0으로 초기화
+                $readmemb(biasFile, mem);   // 파일에서 값 로드
+            end
+        
+            // Bias는 주소 없이 항상 출력 (Static Value per Neuron)
+            assign o_bias = mem[0];
+        endmodule
+
+- 대부분은 Weight_Bank.v와 동일하지만, Bias_Bank의 가장 중요한 특징은 Fixed-Point 연산을 위해 8bit sel_b를 받고 여기에 {dataWidth{1'b0}} (즉, 8개의 0)을 하위 비트에 붙인다. 결과적으로는 Left Shift 8(<<8) 연산을 수행한 것과 같다.
+- 즉, 이는 Systolic Array의 곱셈(Input(8bit) * Weight(8bit)) 결과인 16bit를 고려하는 것이다. 소수점 연산을 위해 Fixed-Point를 사용할 때, 곱셈 결과는 소수점 위치가 이동하며, 이때, Bias는 곱셈 결과에 더해지는 값이므로, 덧셈을 수행하기 전에 곱셈 결과와 자릿수(소수점 위치)를 맞춰주는 과정이 필요하다.
+- Timing 관점에서도 always @(posedge i_clk)를 사용하여 출력을 레지스터에 저장하는데, 이는 Weight_Memory는 메모리 자체가 synchronous(1-clk delay)이었지만, Bias_Memory는 comb logic으로 구현되어 있으므로, Bias_Bank에서 Weight와 타이밍을 맞추는 역할도 수행한다.
+
+### Unified_Buffer.v
+
+        module Unified_Buffer #(
+            parameter dataWidth = 8
+            )(
+            input                 i_clk,
+            input                 i_wen,
+            input [7:0]          i_w_addr, 
+            input [dataWidth-1:0] i_w_data,
+            
+             // 4개의 읽기 포트 주소 입력
+            input [31:0] i_r_addr_0, 
+            input [31:0] i_r_addr_1, 
+            input [31:0] i_r_addr_2, 
+            input [31:0] i_r_addr_3, 
+            
+             // 4개의 읽기 포트 주소 입력
+            output [dataWidth-1:0] o_r_data_0,
+            output [dataWidth-1:0] o_r_data_1,
+            output [dataWidth-1:0] o_r_data_2,
+            output [dataWidth-1:0] o_r_data_3
+        );
+        
+            reg [dataWidth-1:0] mem [255:0];
+        
+            always @(posedge i_clk) begin
+                if (i_wen) begin
+                    mem[i_w_addr] <= i_w_data;
+                end
+            end
+        
+            assign o_r_data_0 = mem[i_r_addr_0];
+            assign o_r_data_1 = mem[i_r_addr_1];
+            assign o_r_data_2 = mem[i_r_addr_2];
+            assign o_r_data_3 = mem[i_r_addr_3];
+        
+        endmodule
+
+- Unified_Buffer는 중간 결과값을 저장하는 통합 버퍼 역할을 한다. Write Port는 1개로, 외부(DMA나 Controller)에서 데이터를 채워 넣을 때는 한 번에 하나씩 순차적으로 쓰는 역할이다. Read Interface는 매 사이클마다 Row 0 ~ 3에 들어갈 데이터가 동시에 필요하다.일반적인 RAM으로는 4개를 동시에 줄 수 없으므로, 포트를 4개 뚫은 것이다.
+
+
+
+
+
