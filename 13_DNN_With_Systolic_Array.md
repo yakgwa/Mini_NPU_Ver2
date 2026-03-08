@@ -434,7 +434,7 @@
             - <cur_input_len - 1 (입력 종료 시점)>
               - 마지막 데이터(Data_Last)가 어레이의 입구(0행, 0열)에 들어가는 시간
               - 0-based index이므로 -1
-            -  <+ (ARRAY_ROW - 1) (Vertical Skew, 행 지연)>
+            - <+ (ARRAY_ROW - 1) (Vertical Skew, 행 지연)>
               - Row 0에서 Row 3으로 갈수록 입력이 한 사이클 늦게 들어감 
               - Row 3까지 데이터가 내려가는 데 걸리는 시간을 고려
             - <+ (ARRAY_ROW - 1) (Horizontal Propagation, 열 전파)>
