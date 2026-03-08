@@ -1033,3 +1033,96 @@
             end
 
 - 4️⃣ Main
+
+            initial begin
+                // 1. 초기화
+                ...
+        
+                // 2. Open Log File
+                log_fd = $fopen("npu_simulation_log.txt", "w");
+                if (log_fd == 0) begin
+                    $display("[TB] ERROR: Cannot open log file!");
+                    $finish;
+                end
+        
+                // 3. Load Test Data
+                $readmemb("test_data_0000.txt", img_mem_0);
+                $readmemb("test_data_0001.txt", img_mem_1);
+                $readmemb("test_data_0002.txt", img_mem_2);
+                $readmemb("test_data_0003.txt", img_mem_3);
+                #1; //loading
+        
+                // 4. Verify MIF Loading
+                verify_mif_loading();
+        
+                // 5. Reset Sequence
+                $fdisplay(log_fd, "\n[TB] Applying Reset...");
+                rst_n = 0;
+                #100;             // 10 clock cycles of reset
+                rst_n = 1;
+                $fdisplay(log_fd, "[TB] Reset Released at time %0t", $time);
+                $display("[TB] Reset released. Starting inference...");
+        
+                // 6. Start Inference
+                @(posedge clk);
+                start_inference = 1;
+                @(posedge clk);
+                start_inference = 0;
+                $fdisplay(log_fd, "[TB] start_inference pulse sent at time %0t", $time);
+        
+                // 7. Wait for Completion with Timeout
+                fork begin
+                        // Wait for done interrupt
+                        wait(done == 1);
+                        $fdisplay(log_fd, "\n[TB] o_done_interrupt asserted at time %0t (Cycle %0d)", $time, cycle_cnt);
+                        $display("[TB] Inference complete at cycle %0d", cycle_cnt);
+                     end
+                     begin
+                        // Timeout watchdog
+                        repeat(TIMEOUT_CYCLES) @(posedge clk);
+                        $fdisplay(log_fd, "\n[TB] ERROR: TIMEOUT after %0d cycles!", TIMEOUT_CYCLES);
+                        $display("[TB] ERROR: TIMEOUT!");
+                        $fflush(log_fd);
+                        $fclose(log_fd);
+                        $finish;
+                     end
+               join_any
+               disable fork;
+        
+        /* 
+        Watchdog Timer
+        fork .. join_any : 두 개의 블록(begin ... end + begin ... end) 동시 출발
+                           둘 중하나라도 먼저 끝나면 join_any 즉시 다음 줄로 넘어감
+        1st begin ... end : 정상 종료(wait(done==1))시에 연산 완료를 출력하고 다음 줄로 넘어감
+        2nd begin ... end : Timeout(연산 오래 걸려 repeat 수를 전부 채움)시에 에러를 출력하고 넘어감
+        */
+                // 8. Wait for MaxFinder to produce results
+                repeat(20) @(posedge clk);
+        
+                // 9. Check Results
+                $fdisplay(log_fd, "\n============================================================");
+                $fdisplay(log_fd, "  INFERENCE RESULTS");
+                $fdisplay(log_fd, "============================================================");
+                // 앞서 정의한 check_result 사용
+                check_result(result_0, img_mem_0[784], 0);
+                check_result(result_1, img_mem_1[784], 1);
+                check_result(result_2, img_mem_2[784], 2);
+                check_result(result_3, img_mem_3[784], 3);
+        
+                // 10. Final Report
+                $fdisplay(log_fd, "\n============================================================");
+                $fdisplay(log_fd, "  FINAL SIMULATION REPORT");
+                $fdisplay(log_fd, "============================================================");
+                $fdisplay(log_fd, "  Total Images   : %0d", total_count);
+                $fdisplay(log_fd, "  Passed         : %0d", pass_count);
+                $fdisplay(log_fd, "  Failed         : %0d", total_count - pass_count);
+                $fdisplay(log_fd, "  Total Cycles   : %0d", cycle_cnt);
+                $fdisplay(log_fd, "============================================================");
+                $display("\n============================================================");
+                $display("  FINAL REPORT: %0d/%0d PASS | Total Cycles: %0d", pass_count, total_count, cycle_cnt);
+                $display("============================================================");
+                $fflush(log_fd);
+                $fclose(log_fd);
+                $finish;
+            end
+        endmodule
