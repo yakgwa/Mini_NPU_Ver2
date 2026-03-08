@@ -806,11 +806,27 @@
                     ..
 
     - 먼저 Raw Data와 Skewed Data를 분리하여 검증한다.
-    - 메모리나 버퍼에서 방금 읽어와 MUX를 통과한 Raw Data는 아직 지연(Delay)이 적용되지 않았으므로, Row 0~3, Col 0~3 모두 동일한 시점(k)의 데이터가 들어와 있는지 확인한다. 
+    - 메모리나 버퍼에서 방금 읽어와 MUX를 통과한 Raw Data는 아직 지연(Delay)이 적용되지 않았으므로, Row 0...3, Col 0...3 모두 동일한 시점(k)의 데이터가 들어와 있는지 확인한다. 
     - 만약 여기서부터 데이터가 이상하다면 메모리 읽기 로직의 문제라고 판단할 수 있다.
     - Data_Skewing을 통과하여 지연이 적용된 후, 실제로 PE Array 입구에 도착한 데이터로서, Row/Col 별 지연이 제대로 먹혔는지 확인한다.
 
-
+                // --- Wavefront Queue Visualization ---
+                $fdisplay(log_fd, "  [Wavefront Entry Pattern]");
+                $fdisplay(log_fd, "                           C0=%4d  C1=%4d  C2=%4d  C3=%4d  <-- Weight (Col)",
+                    $signed(dut.skewed_col_data[1*dataWidth-1 -: dataWidth]),
+                    $signed(dut.skewed_col_data[2*dataWidth-1 -: dataWidth]),
+                    $signed(dut.skewed_col_data[3*dataWidth-1 -: dataWidth]),
+                    $signed(dut.skewed_col_data[4*dataWidth-1 -: dataWidth]));
+                $fdisplay(log_fd, "                           |       |       |       |");
+                $fdisplay(log_fd, "                           v       v       v       v");
+                $fdisplay(log_fd, "  R0=%4d  ---------->  [PE00]  [PE01]  [PE02]  [PE03]",
+                    $signed(dut.skewed_row_data[1*dataWidth-1 -: dataWidth]));
+                $fdisplay(log_fd, "  R1=%4d  ---------->  [PE10]  [PE11]  [PE12]  [PE13]",
+                    $signed(dut.skewed_row_data[2*dataWidth-1 -: dataWidth]));
+                $fdisplay(log_fd, "  R2=%4d  ---------->  [PE20]  [PE21]  [PE22]  [PE23]",
+                    $signed(dut.skewed_row_data[3*dataWidth-1 -: dataWidth]));
+                $fdisplay(log_fd, "  R3=%4d  ---------->  [PE30]  [PE31]  [PE32]  [PE33]",
+                    $signed(dut.skewed_row_data[4*dataWidth-1 -: dataWidth]));
 
 
 
