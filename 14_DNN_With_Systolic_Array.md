@@ -733,9 +733,25 @@
                                 end else begin
                                 ..동일
 
+      - 따라서 다음과 같이 출력 로그가 개선된 것을 확인할 수 있다.
 
-
-
+            ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 1610, Time 16205000) ############
+              [BUF_WR] Cycle: 1612 | addr=  4 | data=   0 | act_out=  37 | AU_psum=  7881 | AU_bias= -3072 | seq= 2
+              [BUF_WR] Cycle: 1613 | addr=  5 | data=  37 | act_out= 116 | AU_psum=  3101 | AU_bias= -2816 | seq= 3
+              [BUF_WR] Cycle: 1614 | addr=  6 | data= 116 | act_out=  67 | AU_psum= -1926 | AU_bias=     0 | seq= 4
+              [BUF_WR] Cycle: 1615 | addr=  7 | data=  67 | act_out=  35 | AU_psum=  5469 | AU_bias= -4608 | seq= 5
+              [BUF_WR] Cycle: 1616 | addr= 36 | data=  35 | act_out=  76 | AU_psum= -7912 | AU_bias= -3072 | seq= 6
+              [BUF_WR] Cycle: 1617 | addr= 37 | data=  76 | act_out=   0 | AU_psum= 17971 | AU_bias= -2816 | seq= 7
+              [BUF_WR] Cycle: 1618 | addr= 38 | data=   0 | act_out= 127 | AU_psum=  2995 | AU_bias=     0 | seq= 8
+              [BUF_WR] Cycle: 1619 | addr= 39 | data= 127 | act_out= 103 | AU_psum= -1404 | AU_bias= -4608 | seq= 9
+              [BUF_WR] Cycle: 1620 | addr= 68 | data= 103 | act_out=   6 | AU_psum=  4921 | AU_bias= -3072 | seq=10
+              [BUF_WR] Cycle: 1621 | addr= 69 | data=   6 | act_out=  90 | AU_psum= -7454 | AU_bias= -2816 | seq=11
+              [BUF_WR] Cycle: 1622 | addr= 70 | data=  90 | act_out=   0 | AU_psum= -7661 | AU_bias=     0 | seq=12
+              [BUF_WR] Cycle: 1623 | addr= 71 | data=   0 | act_out=   2 | AU_psum=  5968 | AU_bias= -4608 | seq=13
+              [BUF_WR] Cycle: 1624 | addr=100 | data=   2 | act_out=  84 | AU_psum= -2668 | AU_bias= -3072 | seq=14
+              [BUF_WR] Cycle: 1625 | addr=101 | data=  84 | act_out=   7 | AU_psum= 16330 | AU_bias= -2816 | seq=15
+              [BUF_WR] Cycle: 1626 | addr=102 | data=   7 | act_out= 127 | AU_psum=-14115 | AU_bias=     0 | seq=16
+              [BUF_WR] Cycle: 1627 | addr=103 | data= 127 | act_out=   0 | AU_psum=  2838 | AU_bias= -4608 | seq=17
 
 
 
