@@ -377,11 +377,16 @@
         endmodule
 
 
-- DUT
-
-
-
-
+- 기존 systolic_controller_relu.v 모듈은 후처리 로직과 데이터 정렬 로직이 혼재되어 있어 복잡도가 높았다. 이에 따라 설계의 가독성과 모듈화를 위해, Systolic Array 입력단의 핵심인 Data Skew Logic을 별도 모듈로 분리하였다. 해당 모듈은 메모리에서 읽어온 Flat(Packed) Row/Col 데이터를, Systolic Array 구조에 맞는 대각선 형태의 Wavefront로 변환하기 위해 Temporal Skewing을 적용하는 역할을 수행한다.
+- 올바른 연산(Input × Weight)이 수행되려면, 데이터가 전파되는 하드웨어적 특성을 고려해야 한다​
+    - 데이터 전파 지연 (Propagation Delay): 각 PE 내부에는 데이터를 잠시 저장했다가 옆으로 전달하는 1-cycle 레지스터(a_reg, b_reg)가 존재한다. 즉, 데이터는 한 번에 모든 PE로 퍼지는 것이 아니라, 매 클럭마다 한 칸씩 이동한다.(예: PE[0][0]를 통과한 Input 데이터는 1 cycle 뒤에야 PE[0][1]에 도달)
+    - 타이밍 동기화 (Synchronization): Input 데이터가 옆으로 이동하는 동안, 짝이 되는 Weight 데이터도 그 자리에서 기다리거나 늦게 도착해야만 정확한 곱셈(Input[k] × Weight[k])이 이루어집니다. 따라서 Input이 이동하는 거리만큼 Weight 데이터 투입 시점도 지연시켜야 두 데이터가 정확한 위치에서 만날 수 있다.
+- 동작 원리 : 대각선 Wavefront 형성
+    - 이 모듈은 Shift Register를 사용하여 인덱스가 증가할수록 더 많은 지연을 주는 방식으로 데이터를 밀어넣어서 입력한다. Skewing Pattern은 인덱스와 동일한 수의 클럭 사이클만큼 지연시킨다.
+      - Row/Col 0: 0 Cycle Delay (즉시 진입)
+      - Row/Col 1: 1 Cycle Delay (레지스터 1개 통과)​
+      - Row/Col 2: 2 Cycle Delay (레지스터 2개 통과)
+      - Row/Col 3: 3 Cycle Delay (레지스터 3개 통과)
 
 
 
