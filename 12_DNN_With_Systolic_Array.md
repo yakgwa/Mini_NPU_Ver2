@@ -387,17 +387,53 @@
       - Row/Col 1: 1 Cycle Delay (레지스터 1개 통과)​
       - Row/Col 2: 2 Cycle Delay (레지스터 2개 통과)
       - Row/Col 3: 3 Cycle Delay (레지스터 3개 통과)
+- 타이밍 예시 (Timing Example)
+    - 메모리에서 읽어온 원본 데이터(Raw)가 Skew Logic을 통과하면(Skewed), 아래와 같이 대각선 형태로 줄을 서서 Array에 진입한다. 
+      - Cycle 0: [ A0, 0, 0, 0 ] → 첫 번째 데이터만 진입
+      - Cycle 1: [ A1, B0, 0, 0 ] → 두 번째 줄 진입 시작​
+      - Cycle 2: [ A2, B1, C0, 0 ] → 세 번째 줄 진입 시작
+      - Cycle 3: [ A3, B2, C1, D0 ] → 전체 4x4 PE에 유효 데이터 도달 (Wavefront 완성)
+- 데이터 정의 (Terminology)
+    - Raw Data: NPU Top의 FSM이 메모리에서 가져와 MUX를 통해 내보낸 직후의 데이터로, 아직 정렬되지 않은 상태
+    - Skewed Data: 본 모듈의 Shift Register 체인을 통과하여 시간차(Delay)가 적용된 데이터로, 실제 Systolic Array의 포트(i_row, i_col)로 연결
 
+### ReLU.v / Sig_ROM.v - Reference Model에서 작성한 DUT와 동일
 
+- DUT
 
+        module ReLU  #(parameter dataWidth=8,weightIntWidth=4) ( 
+            //include.v에 의해 module instantiation 시, dataWidth=8
+            input                          i_clk,
+            input      [2*dataWidth-1:0]   i_in,  
+            output reg [dataWidth-1:0]     o_out
+            );
+        
+            always @(posedge i_clk)
+            begin
+                if($signed(i_in) >= 0) //i_in>=0이면 그대로 전달 (i_in 2의 보수로 해석)
+                begin
+                    if(|i_in[2*dataWidth-1-:weightIntWidth+1]) //over flow to sign bit of integer part
+                        o_out <= {1'b0,{(dataWidth-1){1'b1}}}; //positive saturate
+                    else
+                        o_out <= i_in[2*dataWidth-1-weightIntWidth-:dataWidth];
+                end
+                else                //x<0이면 무조건 0
+                    o_out <= 0;      
+            end
+        endmodule
 
-
-
-
-
-
-
-
-
-
+      - Reference Model 코드 분석 시 꼼꼼하게 분석한 부분들을 다시 한 번 짚어보면, 뉴런 내부에서 input × weight (곱셈), sum + bias (누산)에 따른 확장된 16bit가 입력으로 들어오며, ReLU 출력은 다시 다음 layer의 입력 인터페이스 폭을 고정시키기 위해 dataWidth(8bit)로  scaled-down (re-quantization)된다.
+      - ReLU 입력 i_in의 비트 구간 의미는 dataWidth=8, weightIntWidth=4 기준으로 다음과 같다.
+        - i_in [15:12] | [11:4] | [3:0]
+        - i_in[11:4] : 다음 layer로 전달할 실제 output (8bit)
+        - i_in[3:0] : 소수부 LSB → truncation으로 제거
+        - i_in[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
+      - 한편, Overflow 판단과 Saturation은 다음과 같다.
+        - if(|i_in[2*dataWidth-1-:weightIntWidth+1]) o_out <= {1'b0,{(dataWidth-1){1'b1}}};
+        - dataWidth=8 → |i_in[15-:5]=|x[15:11]와 같은 의미
+          - 상위 비트 중 하나라도 1이면, 출력 8bit로 표현 불가하므로, 최대 양수값(0x7F)으로 saturation
+          - ⚠️ 단, overflow는 i_in[15:12]가 기준이지만, i_in[11]를 포함한 보수적 saturation 정책을 사용
+          - Overflow가 없을 때는 출력 비트를 선택한다.
+        - o_out <= i_in[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → o_out = i_in[11:4]
+          - 정수부 위치를 기준으로 비트 정렬(alignment) 및 단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지한다. LSB(i_in[3:0])는 fixed-point의 소수부에 해당하므로 버린다. 
 
