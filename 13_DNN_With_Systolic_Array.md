@@ -301,5 +301,120 @@
                 end
             endgenerate
 
-
-
+    - 3️⃣ FSM Definition
+ 
+            // ======================================================================================
+            // 7. FSM Controller
+            // ======================================================================================
+        
+            always @(posedge i_clk or negedge i_rst_n) begin
+                if (!i_rst_n) begin
+                    // ===== 리셋 시 초기화 =====
+                    state <= IDLE;           //대기 상태로 시작
+                    k_cnt <= 0;              //모든 카운터 = 0
+                    group_cnt <= 0;      
+                    write_seq_cnt <= 0;
+                    cur_layer_num <= 0;
+                    cur_input_len <= 0;
+                    cur_neuron_total <= 0;
+                    cur_act_sel <= 0;
+                    pe_rst <= 1;              // PE와 skewing SR 리셋 유지
+                    pe_en <= 0;               // MAC 연산 비활성화
+                    buf_wen <= 0;             // Buffer 쓰기 비활성화
+                    buf_w_addr <= 0;
+                    buf_w_data <= 0;
+                    mf_valid_pulse <= 0;
+                    o_done_interrupt <= 0;   
+        
+                end else begin
+                    case (state)
+                        // ============================================================
+                        // [IDLE] 추론 시작 대기
+                        // ============================================================
+                        IDLE: begin
+                            pe_rst <= 1;
+                            buf_wen <= 0;
+                            if (i_start_inference) begin //외부에서 추론 시작 트리거
+                                state <= CALC_L1;
+                                cur_layer_num <= 1;
+                                cur_input_len <= `numWeightLayer1;     // 784
+                                cur_neuron_total <= `numNeuronLayer1;  // 30
+                                cur_act_sel <= SIG;                    // Sigmoid
+                                k_cnt <= 0;
+                                group_cnt <= 0;
+                                pe_rst <= 1;            // PE 누적기 초기화
+                                raw_input_data <= 0;
+                                raw_weight_data <= 0;
+                            end
+                        end
+        
+                        // ============================================================
+                        // [CALC_L1] Layer 1
+                        // ============================================================
+                        CALC_L1: begin
+                            pe_rst <= 0; //PE 리셋 해제 및 ACC 시작
+        
+                            // k_cnt가 유효 범위 내에서만 PE 활성화
+                            if (k_cnt <= cur_input_len - 1 + 2*(ARRAY_ROW - 1)) pe_en <= 1;
+                            else pe_en <= 0;
+        
+                            // Layer 1은 외부 입력 사용
+                            raw_input_data <= i_input_pixels;  // TB에서 매 사이클 갱신
+                            raw_weight_data <= w_bank_out;     // Weight Bank에서 자동 출력
+        
+                            // 입력 시퀀스 종료 조건
+                            if (k_cnt == cur_input_len - 1 + 2*(ARRAY_ROW - 1)) begin
+                                pe_en <= 0;
+                                state <= BUFFER_WR_L1;
+                                write_seq_cnt <= 0;
+                            end else begin
+                                k_cnt <= k_cnt + 1;
+                            end
+                        end
+        
+                        // ============================================================
+                        // [BUFFER_WR_L1] Layer 1 결과 저장
+                        // ============================================================
+                        BUFFER_WR_L1: begin
+                            //16 PE 결과를 순차적으로 처리
+                            if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
+                                if (wr_global_neuron_idx < cur_neuron_total) begin
+                                    buf_wen <= 1;
+                                    buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
+                                    buf_w_data <= act_out_val;
+                                end
+                            end
+                            // 16개 PE 처리 완료 시 다음 동작 결정
+                            if (write_seq_cnt == 16) begin
+                                // 모든 뉴런 그룹 처리 완료?
+                                if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+        /*
+        cur_neuron_total = 30 (Layer 1)
+        
+        Group 0: (0+1)*4 = 4  < 30  → 다음 그룹
+        Group 1: (1+1)*4 = 8  < 30  → 다음 그룹
+        ...
+        Group 6: (6+1)*4 = 28 < 30  → 다음 그룹
+        Group 7: (7+1)*4 = 32 >= 30 → Layer 완료, CALC_L2로 전이
+        */
+                                    // Layer 1 완료 → Layer 2로 전환
+                                    state <= CALC_L2;
+                                    cur_layer_num <= 2;
+                                    cur_input_len <= `numNeuronLayer1;     // 30
+                                    cur_neuron_total <= `numNeuronLayer2;  // 20
+                                    cur_act_sel <= SIG;
+                                    group_cnt <= 0;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end else begin
+                                    // 다음 뉴런 그룹 처리
+                                    state <= CALC_L1;
+                                    group_cnt <= group_cnt + 1;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end
+                                write_seq_cnt <= 0;
+                            end else begin
+                                write_seq_cnt <= write_seq_cnt + 1;
+                            end
+                        end
