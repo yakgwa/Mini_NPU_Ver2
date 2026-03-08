@@ -54,7 +54,11 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_60.png" width="400"/>
 
+우측 Zynq 더블클릭 이후 왼쪽 메뉴에서 세팅
+
 <div align="left">
+
+- 6️⃣ Run Connection Automation (자동 연결이 안 뜨는 핀들은 수동으로 연결)
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_61.png" width="400"/>
 
@@ -70,6 +74,8 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_64.png" width="400"/>
 
+아래 핀들을 선택 후 마우스 우클릭하여 Make External
+
 <div align="left">
 
     - axis_in_data[7:0]
@@ -83,13 +89,23 @@
 - 처리한 결과는 다시 AXI Stream을 통해 DMA로 보낸다.
 - DMA가 결과값을 다시 DDR Memory에 쓰고, CPU에게 Interrupt 신호를 보낸다.
 
+- 7️⃣ Validate Design : 'Successful' Check
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_65.png" width="400"/>
 
+<div align="left">
 
+- 8️⃣ Create HDL Wrapper
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_66.png" width="400"/>
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_7.png" width="400"/>
 
+OK 클릭 후 생성된 .bd 파일을 'set as TOP'으로 지정해야 함
+
+<div align="left">
 
 
 
