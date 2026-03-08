@@ -440,19 +440,19 @@
             - <+ (ARRAY_ROW - 1) (Horizontal Propagation, 열 전파)>
               - 데이터가 행에 도착한 뒤, 왼쪽(Col 0)에서 오른쪽 끝(Col 3)까지 전달되는 시간을 고려
 
-        [Cycle T]      : D_last가 PE(0,0)에 입력됨 (cur_input_len - 1)
-              ↓
-        [Cycle T + 1]  : PE(1,0) 도착
-              ↓
-        [Cycle T + 2]  : PE(2,0) 도착
-              ↓
-        [Cycle T + 3]  : PE(3,0) 도착 (가장 아래 행 도달) -> 첫 번째 (ARRAY_ROW - 1)
-              →
-        [Cycle T + 4]  : PE(3,1) 이동
-              →
-        [Cycle T + 5]  : PE(3,2) 이동
-              →
-        [Cycle T + 6]  : PE(3,3) 도착 (가장 오른쪽 열 도달) -> 두 번째 (ARRAY_ROW - 1)
+                    [Cycle T]      : D_last가 PE(0,0)에 입력됨 (cur_input_len - 1)
+                          ↓
+                    [Cycle T + 1]  : PE(1,0) 도착
+                          ↓
+                    [Cycle T + 2]  : PE(2,0) 도착
+                          ↓
+                    [Cycle T + 3]  : PE(3,0) 도착 (가장 아래 행 도달) -> 첫 번째 (ARRAY_ROW - 1)
+                          →
+                    [Cycle T + 4]  : PE(3,1) 이동
+                          →
+                    [Cycle T + 5]  : PE(3,2) 이동
+                          →
+                    [Cycle T + 6]  : PE(3,3) 도착 (가장 오른쪽 열 도달) -> 두 번째 (ARRAY_ROW - 1)
 
         3) MUX 선택
         4) State Transition (그렇지 않을 경우 매 사이클 k_cnt++하여 입력 시퀀스 진행)
