@@ -572,7 +572,7 @@
 
 <div align="left">
 
-    - FSM 코드 전면 수정
+### FSM 코드 전면 수정
 
                         // ============================================================
                         // [BUFFER_WR_L1] Layer 1 결과 저장
@@ -616,7 +616,126 @@
                         end
         (나머지 CALC_L2,L3 / PRE_CALC_L2,L3도 동일한 방식)
 
-
-
-
+        ############ STATE CHANGE:  --> PRE_CALC_L1 (Cycle 814, Time 8245000) ############
+        ############ STATE CHANGE:  --> CALC_L1 (Cycle 816, Time 8265000) ############
+        ====== [Cycle:  816] State: CALC_L1 | k_cnt:   0 | Group: 1 | pe_en:0 | pe_rst:1 ======
+          [Raw Data (MUX Output)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=   0  C1=   0  C2=   0  C3=   0
+          [Skewed Data (Array Edge)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=   0  C1=   0  C2=   0  C3=   0
+          [PE Accumulator Matrix] (N = Neuron 4~7)
+                          N4         N5         N6         N7 
+          Img0(R0) --> [      0] [      0] [      0] [      0]
+          Img1(R1) --> [      0] [      0] [      0] [      0]
+          Img2(R2) --> [      0] [      0] [      0] [      0]
+          Img3(R3) --> [      0] [      0] [      0] [      0]
         
+        ====== [Cycle:  817] State: CALC_L1 | k_cnt:   1 | Group: 1 | pe_en:1 | pe_rst:0 ======
+          [Raw Data (MUX Output)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=   0  C1=   0  C2=   0  C3=   0
+          [Skewed Data (Array Edge)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=   0  C1=   0  C2=   0  C3=   0
+          [PE Accumulator Matrix] (N = Neuron 4~7)
+                          N4         N5         N6         N7 
+          Img0(R0) --> [      0] [      0] [      0] [      0]
+          Img1(R1) --> [      0] [      0] [      0] [      0]
+          Img2(R2) --> [      0] [      0] [      0] [      0]
+          Img3(R3) --> [      0] [      0] [      0] [      0]
+
+- 최종적으로 Unknown 현상 및 Group1의 CALC_L1 수행 결과(Data Skew 및 MAC 연산 결과)가 정상적으로 동작했음을 확인했다.
+
+- 4️⃣ 다음 Group 연산 결과에 대한 BUF_WR 오류
+
+        ====== [Cycle: 1609] State: CALC_L1 | k_cnt: 793 | Group: 1 | pe_en:1 | pe_rst:0 ======
+          [PE Accumulator Matrix] (N = Neuron 4~7)
+                          N4         N5         N6         N7 
+          Img0(R0) --> [ -14115] [   2838] [   7881] [   3101]
+          Img1(R1) --> [  -1926] [   5469] [  -7912] [  17971]
+          Img2(R2) --> [   2995] [  -1404] [   4921] [  -7454]
+          Img3(R3) --> [  -7661] [   5968] [  -2668] [  16330]
+        
+        ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 1610, Time 16205000) ############
+          [BUF_WR] Cycle: 1610 | addr=  0 | data=  72 | act_out=   0 | AU_psum=-14115 | AU_bias=     0 | seq= 0
+          [BUF_WR] Cycle: 1611 | addr=  0 | data=  72 | act_out=   0 | AU_psum=  2838 | AU_bias= -4608 | seq= 1
+          [BUF_WR] Cycle: 1612 | addr=  4 | data=   0 | act_out=  37 | AU_psum=  7881 | AU_bias= -3072 | seq= 2
+          [BUF_WR] Cycle: 1613 | addr=  5 | data=  37 | act_out= 116 | AU_psum=  3101 | AU_bias= -2816 | seq= 3
+          [BUF_WR] Cycle: 1614 | addr=  6 | data= 116 | act_out=  67 | AU_psum= -1926 | AU_bias=     0 | seq= 4
+          [BUF_WR] Cycle: 1615 | addr=  7 | data=  67 | act_out=  35 | AU_psum=  5469 | AU_bias= -4608 | seq= 5
+          [BUF_WR] Cycle: 1616 | addr= 36 | data=  35 | act_out=  76 | AU_psum= -7912 | AU_bias= -3072 | seq= 6
+          [BUF_WR] Cycle: 1617 | addr= 37 | data=  76 | act_out=   0 | AU_psum= 17971 | AU_bias= -2816 | seq= 7
+          [BUF_WR] Cycle: 1618 | addr= 38 | data=   0 | act_out= 127 | AU_psum=  2995 | AU_bias=     0 | seq= 8
+          [BUF_WR] Cycle: 1619 | addr= 39 | data= 127 | act_out= 103 | AU_psum= -1404 | AU_bias= -4608 | seq= 9
+          [BUF_WR] Cycle: 1620 | addr= 68 | data= 103 | act_out=   6 | AU_psum=  4921 | AU_bias= -3072 | seq=10
+          [BUF_WR] Cycle: 1621 | addr= 69 | data=   6 | act_out=  90 | AU_psum= -7454 | AU_bias= -2816 | seq=11
+          [BUF_WR] Cycle: 1622 | addr= 70 | data=  90 | act_out=   0 | AU_psum= -7661 | AU_bias=     0 | seq=12
+          [BUF_WR] Cycle: 1623 | addr= 71 | data=   0 | act_out=   2 | AU_psum=  5968 | AU_bias= -4608 | seq=13
+          [BUF_WR] Cycle: 1624 | addr=100 | data=   2 | act_out=  84 | AU_psum= -2668 | AU_bias= -3072 | seq=14
+          [BUF_WR] Cycle: 1625 | addr=101 | data=  84 | act_out=   7 | AU_psum= 16330 | AU_bias= -2816 | seq=15
+          [BUF_WR] Cycle: 1626 | addr=102 | data=   7 | act_out= 127 | AU_psum=-14115 | AU_bias=     0 | seq=16
+          [BUF_WR] Cycle: 1627 | addr=103 | data= 127 | act_out=   0 | AU_psum=  2838 | AU_bias= -4608 | seq=17
+
+    - 위 출력 로그는 Group1(Layer1, Neuron4~7번째)에 대한 최종 연산 결과 및 BUF_WR 과정이다. 현 로그에서 보이는 문제점은 Golden Model과의 addr, data 불일치성으로 확인된다.
+
+            ====== [Image 0] LAYER 1 OUTPUT (Cycle: 807) ======
+                N[ 0- 4]:   72    17    95    30     0
+                N[ 5- 9]:   37   116    67   127    17
+                N[10-14]:    0     0     0   115     0
+                N[15-19]:  127     0    55     0    36
+                N[20-24]:    0    18    17    35    84
+                N[25-29]:    1    73     3    12    95
+              [DEBUG_L1] Layer 1 -> Layer 2 data transfer starting...
+            
+            -> N[4] ~ N[7] : 0, 37, 116,67이 addr 4 5 6 7에 들어가야 하는데, 
+            -> 현재 출력 로그 결과는 어딘가 Mismatch되는 것으로 보임
+            ====== [Image 1] LAYER 1 OUTPUT (Cycle: 1735) ======
+              [DEBUG_L1] Layer 1 computation completed
+              [DEBUG_L1] Number of neurons: 30
+              [DEBUG_L1] All neuron outputs (after activation):
+                N[ 0- 4]:  127    51     0     0    35
+                N[ 5- 9]:   76     0   127   127   127
+                N[10-14]:    0    17     4     0     0
+                N[15-19]:  127   125     0    16   126
+                N[20-24]:  126    96    60   127     9
+                N[25-29]:  125    17   126   122     0
+              [DEBUG_L1] Layer 1 -> Layer 2 data transfer starting...
+            
+            -> N[4] ~ N[7] : 35, 76, 0, 127이 addr 36 37 38 39에 들어가야 하는데, 이 부분은 정확히 반영됨.
+            -> 추가로 나머지 image2, 3에 대해서도 정확히 반영됨.
+
+    - 따라서 근본적인 문제 원인은 test_data_0000.txt가 Unified Buffer에 정확히 반영이 되지 않고 있다.
+
+            [BUF_WR] Cycle: 1610 | addr=  0 | data=  72 | seq= 0  ← ❌ 원치 않는 쓰기!
+            [BUF_WR] Cycle: 1611 | addr=  0 | data=  72 | seq= 1  ← ❌ 또 쓰기!
+            [BUF_WR] Cycle: 1612 | addr=  4 | data=   0 | seq= 2  ← ✅ 정상 (Group 1 시작)
+
+    - 🚀 [개선 방안] Group State Transition시 Unknown 발생 / PRE_CALC state 추가
+      - 이는 write_seq_cnt = 0일 때 조건 불만족되며 buf_wen 갱신 안 되는 현상으로 판단하였다. 즉, 이전 사이클의 buf_wen = 1이 유지되고, 레지스터 buf_w_addr, buf_w_data도 이전 값 유지하다보니, 의도치 않은 메모리 쓰기가 발생한 것으로 판단된다. 따라서 다음과 같이 BUFFER_WR_L1,L2,L3에 buf_wen을 리셋하는 구문을 추가한다.
+
+                            // ============================================================
+                            // [BUFFER_WR_L1] Layer 1 결과 저장
+                            // ============================================================
+                            BUFFER_WR_L1: begin
+                                if (write_seq_cnt > 0 && write_seq_cnt <= 16+1) begin
+                                    ..동일
+                                end else begin //변경사항 추가1
+                                    buf_wen <= 0; 
+                                end
+                                if (write_seq_cnt == 16+1) begin
+                                    if ((group_cnt + 1) * 4 >= cur_neuron_total) begin                    
+                                        ..동일
+                                    end
+                                    write_seq_cnt <= 0;
+                                    buf_wen <= 0; //변경사항 추가1
+                                end else begin
+                                ..동일
+
+
+
+
+
+
+
