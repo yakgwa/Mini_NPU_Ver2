@@ -271,6 +271,54 @@
 
 <div align="left">
 
+- Testbench
+
+        module tb_systolic_controller_relu;
+        
+          localparam int K_DIM  = 4;
+          localparam int DATA_W = 8;
+          localparam int ACC_W  = 2*DATA_W + $clog2(K_DIM);
+          localparam int ROWS   = 4;
+          localparam int COLS   = 4;
+          localparam int BIAS   = 50;
+        
+          //==========================================================
+          // Step 1) Interface Definition
+          //==========================================================
+          logic clk;
+          logic rst_n;
+        
+          logic i_start;
+          logic o_busy;
+          logic o_done;
+        
+          logic [ROWS*K_DIM*DATA_W-1:0] i_mat_a;   //packed array dut bus
+          logic [COLS*K_DIM*DATA_W-1:0] i_mat_b;   //packed array dut bus
+          logic [ROWS*COLS*ACC_W-1:0]   o_mat;     //packed array dut bus
+        
+          logic [DATA_W-1:0] tb_mat_a [0:ROWS-1][0:K_DIM-1];  //inner tb unpacked array
+          logic [DATA_W-1:0] tb_mat_b [0:K_DIM-1][0:COLS-1];  //inner tb unpacked array
+          logic [ACC_W-1:0]  tb_mat_c [0:ROWS-1][0:COLS-1];   //inner tb unpacked array
+
+    - 1️⃣ Parameter + Interface Definition
+
+          //==========================================================
+          // Step 2) Constrained Random Transaction
+          //==========================================================
+          class sa_ctrl_txn;
+            rand bit [DATA_W-1:0] A [0:ROWS-1][0:K_DIM-1];
+            rand bit [DATA_W-1:0] B [0:K_DIM-1][0:COLS-1];
+            rand bit do_start;
+            constraint c_start { do_start dist {1 := 70, 0 := 30}; }
+          endclass
+        
+          sa_ctrl_txn sa = new();
+
+
+
+
+
+
 
 
 
