@@ -607,3 +607,20 @@
         endmodule
 
     - Activation Function은 주어진 가중합과 바이어스를 더한 뒤, 선택된 활성화 함수(Sigmoid/ReLU)를 적용하여 최종 출력을 생성하는 기능을 수행한다. 입력으로 들어오는 psum_in (MUL + ADD된 가중합)과 bias_in (바이어스)을 더한 후, Activation Function에 적용하기 전에 이를 saturated value로 변환한다.
+
+        1. bias_add_res 계산:
+        assign bias_add_res = $signed(i_psum_in) + $signed(i_bias);
+        문제점: bias_add_res를 계산할 때, Q4.4 형식으로 Fixed-Point 연산 시,
+                곱셈 결과는 정수부 8bit, 소수부 8bit로 나누어진다.
+                이때, i_bias를 그대로 적용해버리면, 소수부 8bit에 bias가 적용될 위험이 있다.
+        해결  : i_bias를 left shift하여 8bit로 확장하고, 나머지 하위 8bit는 0으로 padding함으로써,
+                정수부 8bit와 bias가 더해지도록 한다.
+        
+        2. sum_saturated 값 처리:
+        always @(*) begin
+            sum_saturated = bias_add_res[2*dataWidth-1:0];
+        end
+        문제점: sum_saturated에 할당되는 값은 bias_add_res의 하위 dataWidth 비트만 저장하게 된다. 
+                이때, 상위 비트가 잘리게 되며, 그로 인해 정보 손실이 발생할 수 있다. 
+        해결  : saturation 처리를 추가하여, 범위 내에서 값을 유지시켜야 한다. 
+                따라서 최댓값과 최솟값으로 클리핑하여 오버플로우 및 정보 손실을 방지한다.
