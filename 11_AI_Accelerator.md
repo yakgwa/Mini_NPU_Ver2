@@ -160,10 +160,14 @@
                     ( (cnt >= r) && ((cnt - r) < K_DIM) ) ? latched_mat_a[r][cnt - r] : 
                                                             {DATA_W{1'b0}};
 
+      - row마다 하드웨어가 ROWS개가 복제된다. 이때, a_in_row를 각 row 입력을 bus에 차례대로 packing해주고, 이때, 아래와 같은 조건에 대해 latched_mat_a를 넣어줄지 결정한다.
 
+        (cnt >= r) && ((cnt - r) < K_DIM)
+        //cnt >= r (row가 시작했는가?), cnt - r < K_DIM (k가 범위 안인가?)
 
-
-
+      - systolic array에서 A[r][k]를 row r에 순서대로 넣고 싶은데, row가 아래로 갈수록 늦게 시작해야 대각선 정렬이 된다. 따라서 row r은 r만큼 늦게 시작하게 만들고, 그 이후엔 k가 0,1,2,3 순서로 들어갈 수 있게 한다.
+      - cnt=r일 때 → k=0, cnt=r+1일 때 → k=1, cnt=r+(K_DIM-1)일 때 → k=K_DIM-1
+     - 즉, 조건이 참이면 실제로 latched_mat_a[r][cnt - r]이 입력되며 시간에 따라 A[r][0], A[r][1], ...이 들어가게 된다. 만약, 조건이 거짓이라면 빈 구간에는 0을 흘려보내서 연산에 영향을 없게 한다.
 
 
 
