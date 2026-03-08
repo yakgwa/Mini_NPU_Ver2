@@ -420,3 +420,10 @@
                             end
 
       - IDLE 전이 동작       
+        1) state ← CALC_L1: Layer 1 연산 시작
+        2) cur_layer_num ← 1: Weight/Bias Bank 선택
+        3) cur_input_len ← 784: MNIST 이미지 크기
+        4) cur_neuron_total ← 30: Layer 1 뉴런 수
+        5) cur_act_sel ← SIG: Sigmoid 활성화
+        6) group_cnt ← 0: 첫 번째 뉴런 그룹
+        7) k_cnt ← 0: 입력 시퀀스 초기화
