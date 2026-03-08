@@ -95,14 +95,55 @@
             ############ STATE CHANGE:  --> CALC_L1 (Cycle 2, Time 125000) ############
             ====== [Cycle:    2] State: CALC_L1 | k_cnt:   0 | Group: 0 | pe_en:0 | pe_rst:1 ======
 
+  3) 실질적 연산 수행 (Cycle 3: Execution Phase) : 
+     - 따라서 데이터 처리는 Cycle 3부터 시작된다. 앞선 Cycle 2에서 요청했던 데이터가 메모리로부터 도착하여 Raw Data가 출력되고, pe_en=1로 반영되어 실질적인 MAC 연산을 수행하게 된다.
 
+            ====== [Cycle:    3] State: CALC_L1 | k_cnt:   1 | Group: 0 | pe_en:1 | pe_rst:0 ======
+              [Raw Data (MUX Output)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=   0
+              [Skewed Data (Array Edge)]
+                Row: R0=   0  R1=   0  R2=   0  R3=   0
+                Col: C0=   0  C1=   0  C2=   0  C3=   0
+              [Wavefront Entry Pattern]
+                                       C0=   0  C1=   0  C2=   0  C3=   0  <-- Weight (Col)
+                                       |       |       |       |
+                                       v       v       v       v
+              R0=   0  ---------->  [PE00]  [PE01]  [PE02]  [PE03]
+              R1=   0  ---------->  [PE10]  [PE11]  [PE12]  [PE13]
+              R2=   0  ---------->  [PE20]  [PE21]  [PE22]  [PE23]
+              R3=   0  ---------->  [PE30]  [PE31]  [PE32]  [PE33]
+              [PE Accumulator Matrix] (N = Neuron 0~3)
+                              N 0        N1         N2         N3 
+              Img0(R0) --> [      0] [      0] [      0] [      0]
+              Img1(R1) --> [      0] [      0] [      0] [      0]
+              Img2(R2) --> [      0] [      0] [      0] [      0]
+              Img3(R3) --> [      0] [      0] [      0] [      0]
 
+     - 가장 먼저 데이터가 제대로 입력되고 있는지 확인하기 위해 검증 포인트를 재설정했다. Cycle 3부터 0번째 Pixel과 Weight가 인가되지만, 초기 데이터의 대부분이 0인 관계로 최초로 0이 아닌 유효 값이 나타나는 시점을 찾아냈다. w_1_0.mif 파일 분석 결과, Layer 1 Neuron 0의 44번째 데이터(mem[44])가 1임을 확인했고, 이 값을 TB 모니터링 로그 상에서 정확히 언제 관측되는지 우선적으로 확인해야 한다.
 
+            ============================================================
+              MIF Loading Verification
+            ============================================================
+              [Weight] L1_N0 w[44]=   1
 
+     - Cycle 3에 0번째 데이터가 인가되므로, 44번째 데이터는 3 + 44 = 47, 즉 Cycle 47에 나타날 것으로 예측된다. 따라서 1차적으로는 Cycle 47의 로그를 중점적으로 확인하였다.
 
+====== [Cycle:   47] State: CALC_L1 | k_cnt:  45 | Group: 0 | pe_en:1 | pe_rst:0 ======
+  [Raw Data (MUX Output)]
+    Row: R0=   0  R1=   0  R2=   0  R3=   0
+    Col: C0=   0  C1=   0  C2=   0  C3=   0
+  [Skewed Data (Array Edge)]
+    Row: R0=   0  R1=   0  R2=   0  R3=   0
+    Col: C0=   0  C1=   0  C2=   0  C3=   0
 
-
-
+====== [Cycle:   48] State: CALC_L1 | k_cnt:  46 | Group: 0 | pe_en:1 | pe_rst:0 ======
+  [Raw Data (MUX Output)]
+    Row: R0=   0  R1=   0  R2=   0  R3=   0
+    Col: C0=   1  C1=   0  C2=   0  C3=   0
+  [Skewed Data (Array Edge)]
+    Row: R0=   0  R1=   0  R2=   0  R3=   0
+    Col: C0=   1  C1=   0  C2=   0  C3=   0
 
 
 
