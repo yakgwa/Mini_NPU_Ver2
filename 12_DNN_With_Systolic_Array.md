@@ -111,6 +111,8 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_42.png" width="400"/>
 
+<div align="left">
+
 ### pe_systolic_cell.v / Systolic_Array.v
 
 - DUT
@@ -192,6 +194,6 @@
 
 
 
-<div align="left">
+
 
 
