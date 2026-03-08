@@ -1030,3 +1030,144 @@
               [BUF_WR] Cycle: 6569 | addr=225 | data=  89 | act_out= 100 | AU_psum=  4668 | AU_bias=  -768 | seq=15
               [BUF_WR] Cycle: 6570 | addr=226 | data= 100 | act_out= 110 | AU_psum=  7006 | AU_bias= -1792 | seq=16
               [BUF_WR] Cycle: 6571 | addr=227 | data= 110 | act_out= 118 | AU_psum=  5455 | AU_bias=  1024 | seq=17
+
+      - Layer 2 : N[16]..N[19]
+     
+            ############ STATE CHANGE:  --> BUFFER_WR_L2 (Cycle 6794, Time 68045000) ############
+              [BUF_WR] Cycle: 6796 | addr=144 | data= 118 | act_out= 105 | AU_psum= -7965 | AU_bias= -2560 | seq= 2
+              [BUF_WR] Cycle: 6797 | addr=145 | data= 105 | act_out=   0 | AU_psum= 10843 | AU_bias= -2560 | seq= 3
+              [BUF_WR] Cycle: 6798 | addr=146 | data=   0 | act_out= 125 | AU_psum= -3003 | AU_bias=   512 | seq= 4
+              [BUF_WR] Cycle: 6799 | addr=147 | data= 125 | act_out=  29 | AU_psum= -3594 | AU_bias=   512 | seq= 5
+              [BUF_WR] Cycle: 6800 | addr=176 | data=  29 | act_out=  22 | AU_psum=   536 | AU_bias= -2560 | seq= 6
+              [BUF_WR] Cycle: 6801 | addr=177 | data=  22 | act_out=  34 | AU_psum=  2517 | AU_bias= -2560 | seq= 7
+              [BUF_WR] Cycle: 6802 | addr=178 | data=  34 | act_out=  63 | AU_psum= -1948 | AU_bias=   512 | seq= 8
+              [BUF_WR] Cycle: 6803 | addr=179 | data=  63 | act_out=  41 | AU_psum= -7761 | AU_bias=   512 | seq= 9
+              [BUF_WR] Cycle: 6804 | addr=208 | data=  41 | act_out=   3 | AU_psum=  8627 | AU_bias= -2560 | seq=10
+              [BUF_WR] Cycle: 6805 | addr=209 | data=   3 | act_out= 121 | AU_psum=  5452 | AU_bias= -2560 | seq=11
+              [BUF_WR] Cycle: 6806 | addr=210 | data= 121 | act_out= 102 | AU_psum= -4699 | AU_bias=   512 | seq=12
+              [BUF_WR] Cycle: 6807 | addr=211 | data= 102 | act_out=  14 | AU_psum=  4578 | AU_bias=   512 | seq=13
+              [BUF_WR] Cycle: 6808 | addr=240 | data=  14 | act_out= 118 | AU_psum=   581 | AU_bias= -2560 | seq=14
+              [BUF_WR] Cycle: 6809 | addr=241 | data= 118 | act_out=  35 | AU_psum=  3259 | AU_bias= -2560 | seq=15
+              [BUF_WR] Cycle: 6810 | addr=242 | data=  35 | act_out=  73 | AU_psum=  4641 | AU_bias=   512 | seq=16
+              [BUF_WR] Cycle: 6811 | addr=243 | data=  73 | act_out= 118 | AU_psum=  2679 | AU_bias=   512 | seq=17
+
+            //Layer 2 Golden Model Result Summary
+            ====== [Image 0] LAYER 2 OUTPUT (Cycle: 844) ======
+                N[ 0- 4]:  118   122   111     5     7
+                N[ 5- 9]:  125     0    64   113    86
+                N[10-14]:   91   125    73     1    78
+                N[15-19]:   40   118   105     0   125
+            
+            ====== [Image 1] LAYER 2 OUTPUT (Cycle: 1772) ======
+                N[ 0- 4]:    4    10     8   116    91
+                N[ 5- 9]:  102    43    21    12    85
+                N[10-14]:    1   115     2     4    59
+                N[15-19]:  100    29    22    34    63
+            
+            ====== [Image 2] LAYER 2 OUTPUT (Cycle: 2700) ======
+                N[ 0- 4]:    9    21    30    25     4
+                N[ 5- 9]:   87   114    20   102    92
+                N[10-14]:   13   104    18    67    23
+                N[15-19]:    7    41     3   121   102
+            
+            ====== [Image 3] LAYER 2 OUTPUT (Cycle: 3628) ======
+                N[ 0- 4]:  124    89   100   110   113
+                N[ 5- 9]:    8     1   120     3    13
+                N[10-14]:   16    17    99     4    74
+                N[15-19]:  102    14   118    35    73
+
+      - Layer 3 : N[0]..N[3]
+
+            ############ STATE CHANGE:  --> BUFFER_WR_L3 (Cycle 6844, Time 68545000) ############
+              [BUF_WR] Cycle: 6846 | addr=  0 | data=   0 | act_out=   0 | AU_psum= -8217 | AU_bias= -5632 | seq= 2
+              [BUF_WR] Cycle: 6847 | addr=  1 | data=   0 | act_out=   0 | AU_psum= -8703 | AU_bias= -1024 | seq= 3
+              [BUF_WR] Cycle: 6848 | addr=  2 | data=   0 | act_out=   1 | AU_psum= -8549 | AU_bias= -6144 | seq= 4
+              [BUF_WR] Cycle: 6849 | addr=  3 | data=   1 | act_out=   0 | AU_psum= -1764 | AU_bias= -6656 | seq= 5
+              [BUF_WR] Cycle: 6850 | addr= 32 | data=   0 | act_out=   2 | AU_psum= 10960 | AU_bias= -5632 | seq= 6
+              [BUF_WR] Cycle: 6851 | addr= 33 | data=   2 | act_out= 119 | AU_psum=-10008 | AU_bias= -1024 | seq= 7
+              [BUF_WR] Cycle: 6852 | addr= 34 | data= 119 | act_out=   0 | AU_psum=-25806 | AU_bias= -6144 | seq= 8
+              [BUF_WR] Cycle: 6853 | addr= 35 | data=   0 | act_out=   0 | AU_psum= 15282 | AU_bias= -6656 | seq= 9
+              [BUF_WR] Cycle: 6854 | addr= 64 | data=   0 | act_out= 126 | AU_psum=-12795 | AU_bias= -5632 | seq=10
+              [BUF_WR] Cycle: 6855 | addr= 65 | data= 126 | act_out=   0 | AU_psum=-15873 | AU_bias= -1024 | seq=11
+              [BUF_WR] Cycle: 6856 | addr= 66 | data=   0 | act_out=   0 | AU_psum= 18123 | AU_bias= -6144 | seq=12
+              [BUF_WR] Cycle: 6857 | addr= 67 | data=   0 | act_out= 127 | AU_psum=-29797 | AU_bias= -6656 | seq=13
+              [BUF_WR] Cycle: 6858 | addr= 96 | data= 127 | act_out=   0 | AU_psum= -7282 | AU_bias= -5632 | seq=14
+              [BUF_WR] Cycle: 6859 | addr= 97 | data=   0 | act_out=   0 | AU_psum=-14091 | AU_bias= -1024 | seq=15
+              [BUF_WR] Cycle: 6860 | addr= 98 | data=   0 | act_out=   0 | AU_psum=-12245 | AU_bias= -6144 | seq=16
+              [BUF_WR] Cycle: 6861 | addr= 99 | data=   0 | act_out=   0 | AU_psum=-11900 | AU_bias= -6656 | seq=17
+
+      - Layer 3 : N[4]..N[7]
+
+            ############ STATE CHANGE:  --> BUFFER_WR_L3 (Cycle 6894, Time 69045000) ############
+              [BUF_WR] Cycle: 6896 | addr=  4 | data=   0 | act_out=   0 | AU_psum=-32768 | AU_bias= -2560 | seq= 2
+              [BUF_WR] Cycle: 6897 | addr=  5 | data=   0 | act_out=   0 | AU_psum= 18238 | AU_bias= -8704 | seq= 3
+              [BUF_WR] Cycle: 6898 | addr=  6 | data=   0 | act_out= 126 | AU_psum= -4732 | AU_bias= -7936 | seq= 4
+              [BUF_WR] Cycle: 6899 | addr=  7 | data= 126 | act_out=   0 | AU_psum=-25363 | AU_bias= -4864 | seq= 5
+              [BUF_WR] Cycle: 6900 | addr= 36 | data=   0 | act_out=   0 | AU_psum= -8842 | AU_bias= -2560 | seq= 6
+              [BUF_WR] Cycle: 6901 | addr= 37 | data=   0 | act_out=   0 | AU_psum=-13262 | AU_bias= -8704 | seq= 7
+              [BUF_WR] Cycle: 6902 | addr= 38 | data=   0 | act_out=   0 | AU_psum= -8956 | AU_bias= -7936 | seq= 8
+              [BUF_WR] Cycle: 6903 | addr= 39 | data=   0 | act_out=   0 | AU_psum= -4706 | AU_bias= -4864 | seq= 9
+              [BUF_WR] Cycle: 6904 | addr= 68 | data=   0 | act_out=   1 | AU_psum=-10207 | AU_bias= -2560 | seq=10
+              [BUF_WR] Cycle: 6905 | addr= 69 | data=   1 | act_out=   0 | AU_psum= -8088 | AU_bias= -8704 | seq=11
+              [BUF_WR] Cycle: 6906 | addr= 70 | data=   0 | act_out=   0 | AU_psum=-12320 | AU_bias= -7936 | seq=12
+              [BUF_WR] Cycle: 6907 | addr= 71 | data=   0 | act_out=   0 | AU_psum=-10684 | AU_bias= -4864 | seq=13
+              [BUF_WR] Cycle: 6908 | addr=100 | data=   0 | act_out=   0 | AU_psum=-14481 | AU_bias= -2560 | seq=14
+              [BUF_WR] Cycle: 6909 | addr=101 | data=   0 | act_out=   0 | AU_psum= -9051 | AU_bias= -8704 | seq=15
+              [BUF_WR] Cycle: 6910 | addr=102 | data=   0 | act_out=   0 | AU_psum=-13049 | AU_bias= -7936 | seq=16
+              [BUF_WR] Cycle: 6911 | addr=103 | data=   0 | act_out=   0 | AU_psum= -9578 | AU_bias= -4864 | seq=17
+
+      - Layer 3 : N[8]..N[9]
+
+            ############ STATE CHANGE:  --> BUFFER_WR_L3 (Cycle 6944, Time 69545000) ############
+              [BUF_WR] Cycle: 6946 | addr=  8 | data=   0 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq= 2
+              [BUF_WR] Cycle: 6947 | addr=  9 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq= 3
+              [BUF_WR] Cycle: 6948 | addr=  9 | data=   0 | act_out=  64 | AU_psum= -4196 | AU_bias= -5888 | seq= 4
+              [BUF_WR] Cycle: 6949 | addr=  9 | data=   0 | act_out=   0 | AU_psum=-16402 | AU_bias= -5888 | seq= 5
+              [BUF_WR] Cycle: 6950 | addr= 40 | data=   0 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq= 6
+              [BUF_WR] Cycle: 6951 | addr= 41 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq= 7
+              [BUF_WR] Cycle: 6952 | addr= 41 | data=   0 | act_out=  64 | AU_psum= -4807 | AU_bias= -5888 | seq= 8
+              [BUF_WR] Cycle: 6953 | addr= 41 | data=   0 | act_out=   0 | AU_psum=-12134 | AU_bias= -5888 | seq= 9
+              [BUF_WR] Cycle: 6954 | addr= 72 | data=   0 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq=10
+              [BUF_WR] Cycle: 6955 | addr= 73 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq=11
+              [BUF_WR] Cycle: 6956 | addr= 73 | data=   0 | act_out=  64 | AU_psum= -8600 | AU_bias= -5888 | seq=12
+              [BUF_WR] Cycle: 6957 | addr= 73 | data=   0 | act_out=   0 | AU_psum= -7576 | AU_bias= -5888 | seq=13
+              [BUF_WR] Cycle: 6958 | addr=104 | data=   0 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq=14
+              [BUF_WR] Cycle: 6959 | addr=105 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq=15
+              [BUF_WR] Cycle: 6960 | addr=105 | data=   0 | act_out=  64 | AU_psum=-22617 | AU_bias= -5888 | seq=16
+              [BUF_WR] Cycle: 6961 | addr=105 | data=   0 | act_out=   0 | AU_psum=-12119 | AU_bias= -5888 | seq=17
+
+            ====== [Image 0] LAYER 3 OUTPUT (Cycle: 871) ======
+                N[ 0- 4]:    0     0     0     1     0
+                N[ 5- 9]:    0     0   126     0     0
+            
+            ====== [Image 1] LAYER 3 OUTPUT (Cycle: 1799) ======
+                N[ 0- 4]:    0     2   119     0     0
+                N[ 5- 9]:    0     0     0     0     0
+            
+            ====== [Image 2] LAYER 3 OUTPUT (Cycle: 2727) ======
+                N[ 0- 4]:    0   126     0     0     0
+                N[ 5- 9]:    1     0     0     0     0
+            
+            ====== [Image 3] LAYER 3 OUTPUT (Cycle: 3655) ======
+                N[ 0- 4]:  127     0     0     0     0
+                N[ 5- 9]:    0     0     0     0     0
+
+- 6️⃣ 연산 완료 시점과 인터럽트 타이밍 경합 : Race Condition
+    - Layer 1~3의 연산 결과는 Golden과 일치함을 확인하였고, 이제는 MaxFinder 결과를 확인할 차례이다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_50.png" width="400"/>
+
+<div align="left">
+
+    - MaxFinder 결과 Result가 모두 0으로 출력되는 문제가 발생하였다. 모든 레이어에 대한 연산 결과가 일치하였지만, 결과가 다르게 나왔다는 의미는 어떠한 제어 신호가 문제가 있는 것으로 초기에 파악하였다.
+
+                            if (k_cnt == 10) begin
+                                mf_valid_pulse <= 1; // Start MaxFinder
+                                state <= DONE;
+                                o_done_interrupt <= 1;
+                            end else begin
+                                k_cnt <= k_cnt + 1;
+                            end
+
+
+        
