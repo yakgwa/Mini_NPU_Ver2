@@ -687,3 +687,15 @@
                 ...
                 Cycle N+10: buf_r_data 유효, mf_in_data[x][79:72] 저장, k_cnt=10
       
+
+        2) MaxFinder 트리거
+       
+                if (k_cnt == 10) begin
+                    mf_valid_pulse <= 1;
+                    state <= DONE;
+                    o_done_interrupt <= 1;
+                end
+
+            - mf_valid_pulse = 1: MaxFinder 동작 트리거 (1-cycle 펄스)
+            - state ← DONE: 완료 상태로 전이
+            - o_done_interrupt = 1: 외부 시스템에 인터럽트 발생
