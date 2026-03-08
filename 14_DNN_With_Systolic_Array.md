@@ -753,5 +753,114 @@
               [BUF_WR] Cycle: 1626 | addr=102 | data=   7 | act_out= 127 | AU_psum=-14115 | AU_bias=     0 | seq=16
               [BUF_WR] Cycle: 1627 | addr=103 | data= 127 | act_out=   0 | AU_psum=  2838 | AU_bias= -4608 | seq=17
 
+      - 아래는 마지막 Group7의 CALC_L1까지 정상적으로 BUF_WR이 동작함을 알 수 있다.
+
+            ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 6494, Time 65045000) ############
+              [BUF_WR] Cycle: 6496 | addr= 28 | data=  12 | act_out=  95 | AU_psum=     0 | AU_bias=     0 | seq= 2
+              [BUF_WR] Cycle: 6497 | addr= 29 | data=  95 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq= 3
+              [BUF_WR] Cycle: 6498 | addr= 29 | data=  95 | act_out=  64 | AU_psum=  6335 | AU_bias=   256 | seq= 4
+              [BUF_WR] Cycle: 6499 | addr= 29 | data=  95 | act_out= 122 | AU_psum=-32768 | AU_bias=  1280 | seq= 5
+              [BUF_WR] Cycle: 6500 | addr= 60 | data= 122 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq= 6
+              [BUF_WR] Cycle: 6501 | addr= 61 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq= 7
+              [BUF_WR] Cycle: 6502 | addr= 61 | data=   0 | act_out=  64 | AU_psum=  4515 | AU_bias=   256 | seq= 8
+              [BUF_WR] Cycle: 6503 | addr= 61 | data=   0 | act_out= 116 | AU_psum= -7846 | AU_bias=  1280 | seq= 9
+              [BUF_WR] Cycle: 6504 | addr= 92 | data= 116 | act_out=   4 | AU_psum=     0 | AU_bias=     0 | seq=10
+              [BUF_WR] Cycle: 6505 | addr= 93 | data=   4 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq=11
+              [BUF_WR] Cycle: 6506 | addr= 93 | data=   4 | act_out=  64 | AU_psum= -5635 | AU_bias=   256 | seq=12
+              [BUF_WR] Cycle: 6507 | addr= 93 | data=   4 | act_out=   8 | AU_psum=-26676 | AU_bias=  1280 | seq=13
+              [BUF_WR] Cycle: 6508 | addr=124 | data=   8 | act_out=   0 | AU_psum=     0 | AU_bias=     0 | seq=14
+              [BUF_WR] Cycle: 6509 | addr=125 | data=   0 | act_out=  64 | AU_psum=     0 | AU_bias=     0 | seq=15
+              [BUF_WR] Cycle: 6510 | addr=125 | data=   0 | act_out=  64 | AU_psum= -4783 | AU_bias=   256 | seq=16
+              [BUF_WR] Cycle: 6511 | addr=125 | data=   0 | act_out=  12 | AU_psum=   899 | AU_bias=  1280 | seq=17
+
+- 5️⃣ FSM State Transition시 추가적인 Unknown 현상 발생
+
+        ############ STATE CHANGE:  --> BUFFER_WR_L1 (Cycle 6494, Time 65045000) ############
+          BUF_WR 로그 결과는 바로 위에서 확인 가능
+        
+        ############ STATE CHANGE:  --> CALC_L2 (Cycle 6512, Time 65225000) ############
+        
+        ====== [Cycle: 6512] State: CALC_L2 | k_cnt:   0 | Group: 0 | pe_en:0 | pe_rst:1 ======
+          [Raw Data (MUX Output)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=x  C1=x  C2=   0  C3=   0
+          [Skewed Data (Array Edge)]
+            Row: R0=   0  R1=   0  R2=   0  R3=   0
+            Col: C0=x  C1=   0  C2=   0  C3=   0
+          [Wavefront Entry Pattern]
+                                   C0=x  C1=   0  C2=   0  C3=   0  <-- Weight (Col)
+                                   |       |       |       |
+                                   v       v       v       v
+          R0=   0  ---------->  [PE00]  [PE01]  [PE02]  [PE03]
+          R1=   0  ---------->  [PE10]  [PE11]  [PE12]  [PE13]
+          R2=   0  ---------->  [PE20]  [PE21]  [PE22]  [PE23]
+          R3=   0  ---------->  [PE30]  [PE31]  [PE32]  [PE33]
+          [PE Accumulator Matrix] (N = Neuron 0~3)
+                          N 0        N1         N2         N3 
+          Img0(R0) --> [  -4783] [    899] [      0] [      0]
+          Img1(R1) --> [   6335] [ -32768] [      0] [      0]
+          Img2(R2) --> [   4515] [  -7846] [      0] [      0]
+          Img3(R3) --> [  -5635] [ -26676] [      0] [      0]
+        
+        ====== [Cycle: 6513] State: CALC_L2 | k_cnt:   1 | Group: 0 | pe_en:1 | pe_rst:0 ======
+          [Raw Data (MUX Output)]
+            Row: R0=  72  R1= 127  R2= 127  R3= 100
+            Col: C0= -19  C1= -45  C2=  -2  C3=   9
+          [Skewed Data (Array Edge)]
+            Row: R0=  72  R1=   0  R2=   0  R3=   0
+            Col: C0= -19  C1=   0  C2=   0  C3=   0
+          [Wavefront Entry Pattern]
+                                   C0= -19  C1=   0  C2=   0  C3=   0  <-- Weight (Col)
+                                   |       |       |       |
+                                   v       v       v       v
+          R0=  72  ---------->  [PE00]  [PE01]  [PE02]  [PE03]
+          R1=   0  ---------->  [PE10]  [PE11]  [PE12]  [PE13]
+          R2=   0  ---------->  [PE20]  [PE21]  [PE22]  [PE23]
+          R3=   0  ---------->  [PE30]  [PE31]  [PE32]  [PE33]
+          [PE Accumulator Matrix] (N = Neuron 0~3)
+                          N 0        N1         N2         N3 
+          Img0(R0) --> [      0] [      0] [      0] [      0]
+          Img1(R1) --> [      0] [      0] [      0] [      0]
+          Img2(R2) --> [      0] [      0] [      0] [      0]
+          Img3(R3) --> [      0] [      0] [      0] [      0]
+
+      - 🔴앞서 살펴본 문제와 동일하게 Layer 2 연산 즉, Unified Buffer에서 Layer1 결과를 가져오고, Weight_Bank에서 Layer2에 대한 Weight를 가져오는 과정에서 Memory Latency 현상이 관찰된다.
+
+    - 🚀 [개선 방안] FSM 일부 수정
+      - 이는 기존 FSM을 다음과 같이 일부 수정함으로써 해결할 수 있다. 구체적으로는 BUFFER_WR_L1,L2 역시 바로 CALC_L2,L3로 넘어가지 않고, PRE_CALC_L2,L3로 넘어감으로써 Memory 갱신 시간을 확보한다.
+
+                            // ============================================================
+                            // [BUFFER_WR_L1] Layer 1 결과 저장
+                            // ============================================================
+                            BUFFER_WR_L1: begin
+                                if (write_seq_cnt > 0 && write_seq_cnt <= 16+1) begin
+                                    ..동일
+                                end
+                                if (write_seq_cnt == 16+1) begin
+                                    if ((group_cnt + 1) * 4 >= cur_neuron_total) begin                    
+                                        state <= PRE_CALC_L2; //변경사항 추가 추가1
+                                        ..동일
+                                        pre_calc_cnt <= 0; //변경사항 추가 추가2
+                                    end else begin
+                                        ..동일
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
