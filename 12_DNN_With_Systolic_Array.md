@@ -425,15 +425,15 @@
     - Reference Model 코드 분석 시 꼼꼼하게 분석한 부분들을 다시 한 번 짚어보면, 뉴런 내부에서 input × weight (곱셈), sum + bias (누산)에 따른 확장된 16bit가 입력으로 들어오며, ReLU 출력은 다시 다음 layer의 입력 인터페이스 폭을 고정시키기 위해 dataWidth(8bit)로  scaled-down (re-quantization)된다.
     - ReLU 입력 i_in의 비트 구간 의미는 dataWidth=8, weightIntWidth=4 기준으로 다음과 같다.
       - i_in [15:12] | [11:4] | [3:0]
-    - i_in[11:4] : 다음 layer로 전달할 실제 output (8bit)
-    - i_in[3:0] : 소수부 LSB → truncation으로 제거
-    - i_in[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
+      - i_in[11:4] : 다음 layer로 전달할 실제 output (8bit)
+      - i_in[3:0] : 소수부 LSB → truncation으로 제거
+      - i_in[15:12]: 출력 폭으로 표현 불가능한 상위 비트 → overflow 영역
     - 한편, Overflow 판단과 Saturation은 다음과 같다.
-    - if(|i_in[2*dataWidth-1-:weightIntWidth+1]) o_out <= {1'b0,{(dataWidth-1){1'b1}}};
-    - dataWidth=8 → |i_in[15-:5]=|x[15:11]와 같은 의미
+      - if(|i_in[2*dataWidth-1-:weightIntWidth+1]) o_out <= {1'b0,{(dataWidth-1){1'b1}}};
+      - dataWidth=8 → |i_in[15-:5]=|x[15:11]와 같은 의미
     - 상위 비트 중 하나라도 1이면, 출력 8bit로 표현 불가하므로, 최대 양수값(0x7F)으로 saturation
     - ⚠️ 단, overflow는 i_in[15:12]가 기준이지만, i_in[11]를 포함한 보수적 saturation 정책을 사용
     - Overflow가 없을 때는 출력 비트를 선택한다.
-    - o_out <= i_in[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → o_out = i_in[11:4]
+      - o_out <= i_in[2*dataWidth-1-weightIntWidth-:dataWidth]; // dataWidth=8 → o_out = i_in[11:4]
     - 정수부 위치를 기준으로 비트 정렬(alignment) 및 단순 상/하위 비트 선택이 아니라 → fixed-point 스케일 유지한다. LSB(i_in[3:0])는 fixed-point의 소수부에 해당하므로 버린다. 
 
