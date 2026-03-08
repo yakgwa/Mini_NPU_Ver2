@@ -964,4 +964,69 @@
             // 3. Write Address 수정
             buf_w_addr <= buf_base_offset_wr + (wr_img_idx * 32) + wr_global_neuron_idx;
 
+      - 즉, offset register를 추가로 삽입하여 address 계산을 전반적으로 수정하였다. 이렇게 수정된 address를 통해 FSM 내부를 일부 수정한다.
+     
+            // Layer 1 → Layer 2 전환 부분 수정
+            if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                state <= PRE_CALC_L2;
+                ...
+                // ===== Layer 2 Buffer Offset 설정 =====
+                buf_base_offset_rd <= 0;    // Bank 0에서 읽기 (Layer 1 출력)
+                buf_base_offset_wr <= 128;  // Bank 1에 쓰기 (덮어쓰기 방지)
+            end
+            
+            // Layer 2 → Layer 3 전환
+            if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                state <= PRE_CALC_L3;
+                ...
+                // ===== Layer 3 Buffer Offset 설정 =====
+                buf_base_offset_rd <= 128;  // Bank 1에서 읽기 (Layer 2 출력)
+                buf_base_offset_wr <= 0;    // Bank 0에 쓰기 (Layer 1 재사용 가능)
+            end
 
+      - 이렇게 수정 후 블록 다이어그램으로 본 메모리 맵은 다음과 같다.   
+
+            [Layer 1 완료]
+            Bank 0: ┌───────────────────────┐
+                    │ L1 출력 (addr 0~127)  │ ← Layer 2가 읽을 데이터
+                    └───────────────────────┘
+            Bank 1: ┌───────────────────────┐
+                    │ (Empty)               │
+                    └───────────────────────┘
+            
+            [Layer 2 완료]
+            Bank 0: ┌───────────────────────┐
+                    │ L1 출력 (보존됨!)     │
+                    └───────────────────────┘
+            Bank 1: ┌───────────────────────┐
+                    │ L2 출력 (128~255)     │ ← Layer 3가 읽을 데이터 ✅
+                    └───────────────────────┘
+            
+            [Layer 3 완료]
+            Bank 0: ┌───────────────────────┐
+                    │ L3 출력 (0~127)       │ ← MaxFinder가 읽을 최종 결과 ✅
+                    └───────────────────────┘
+            Bank 1: ┌───────────────────────┐
+                    │ L2 출력 (보존됨)      │
+                    └───────────────────────┘
+
+      - 반영된 최종 CALC_L2의 BUF_WR에 대한 로그는 다음과 같이 Golden Model과 일치함을 알 수 있다.
+      - Layer 2 : N[0]..N[3]
+
+            ############ STATE CHANGE:  --> BUFFER_WR_L2 (Cycle 6554, Time 65645000) ############
+              [BUF_WR] Cycle: 6556 | addr=128 | data= 118 | act_out= 122 | AU_psum=  4169 | AU_bias=  -256 | seq= 2
+              [BUF_WR] Cycle: 6557 | addr=129 | data= 122 | act_out= 111 | AU_psum= -5385 | AU_bias=  -768 | seq= 3
+              [BUF_WR] Cycle: 6558 | addr=130 | data= 111 | act_out=   5 | AU_psum= -4885 | AU_bias= -1792 | seq= 4
+              [BUF_WR] Cycle: 6559 | addr=131 | data=   5 | act_out=   4 | AU_psum= -5960 | AU_bias=  1024 | seq= 5
+              [BUF_WR] Cycle: 6560 | addr=160 | data=   4 | act_out=  10 | AU_psum= -5107 | AU_bias=  -256 | seq= 6
+              [BUF_WR] Cycle: 6561 | addr=161 | data=  10 | act_out=   8 | AU_psum=  5514 | AU_bias=  -768 | seq= 7
+              [BUF_WR] Cycle: 6562 | addr=162 | data=   8 | act_out= 116 | AU_psum= -3375 | AU_bias= -1792 | seq= 8
+              [BUF_WR] Cycle: 6563 | addr=163 | data= 116 | act_out=   9 | AU_psum= -4244 | AU_bias=  1024 | seq= 9
+              [BUF_WR] Cycle: 6564 | addr=192 | data=   9 | act_out=  21 | AU_psum= -2060 | AU_bias=  -256 | seq=10
+              [BUF_WR] Cycle: 6565 | addr=193 | data=  21 | act_out=  30 | AU_psum= -2071 | AU_bias=  -768 | seq=11
+              [BUF_WR] Cycle: 6566 | addr=194 | data=  30 | act_out=  25 | AU_psum=  9021 | AU_bias= -1792 | seq=12
+              [BUF_WR] Cycle: 6567 | addr=195 | data=  25 | act_out= 124 | AU_psum=   762 | AU_bias=  1024 | seq=13
+              [BUF_WR] Cycle: 6568 | addr=224 | data= 124 | act_out=  89 | AU_psum=  2992 | AU_bias=  -256 | seq=14
+              [BUF_WR] Cycle: 6569 | addr=225 | data=  89 | act_out= 100 | AU_psum=  4668 | AU_bias=  -768 | seq=15
+              [BUF_WR] Cycle: 6570 | addr=226 | data= 100 | act_out= 110 | AU_psum=  7006 | AU_bias= -1792 | seq=16
+              [BUF_WR] Cycle: 6571 | addr=227 | data= 110 | act_out= 118 | AU_psum=  5455 | AU_bias=  1024 | seq=17
