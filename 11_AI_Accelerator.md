@@ -154,6 +154,8 @@
                 end
             endgenerate
 
+---------------------------------------------------------------------------------------
+
             // Row Logic (Matrix A)
             for (r = 0; r < ROWS; r = r + 1) begin : GEN_ROW_DATA
                 assign a_in_row[r*DATA_W +: DATA_W] = 
