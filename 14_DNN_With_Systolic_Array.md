@@ -92,8 +92,8 @@
   2) 상태 진입 및 데이터 요청 (Cycle 2: Setup Phase) : 
      - Cycle 2가 되면 CALC_L1으로 진입한다. 이 시점이 상태상으로는 시작이지만, 하드웨어적으로는 '연산 준비 및 요청' 단계에 해당된다. k_cnt=0인 상태에서 메모리를 향해 "0번지 주소의 데이터를 달라"는 요청(Addr <= 0)을 보내고, 동시에 연산 유닛을 킨다.(pe_en <= 1). 하지만 이 동작들은 Rising Edge에 트리거 되는 명령이기에 실제 로그 상 아직 데이터가 도착하지 않았고 PE도 활성화되지 않는 상태이다.
 
-        ############ STATE CHANGE:  --> CALC_L1 (Cycle 2, Time 125000) ############
-        ====== [Cycle:    2] State: CALC_L1 | k_cnt:   0 | Group: 0 | pe_en:0 | pe_rst:1 ======
+            ############ STATE CHANGE:  --> CALC_L1 (Cycle 2, Time 125000) ############
+            ====== [Cycle:    2] State: CALC_L1 | k_cnt:   0 | Group: 0 | pe_en:0 | pe_rst:1 ======
 
 
 
