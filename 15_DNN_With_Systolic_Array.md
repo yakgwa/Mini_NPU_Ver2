@@ -56,10 +56,17 @@
 
 <div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_61.png" width="400"/>
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_62.png" width="400"/>
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU_Ver2/blob/main/Picture/image_63.png" width="400"/>
+
+<div align="left">
 
 
 
